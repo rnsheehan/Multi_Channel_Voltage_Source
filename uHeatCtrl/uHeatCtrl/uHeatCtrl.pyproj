@@ -5,8 +5,7 @@
     <ProjectGuid>385b9f6d-382f-4180-88d1-93e9955dab46</ProjectGuid>
     <ProjectHome>.</ProjectHome>
     <StartupFile>uHeatCtrl.py</StartupFile>
-    <SearchPath>
-    </SearchPath>
+    <SearchPath>..\..\..\Plotting;..\..\..\Common</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <Name>uHeatCtrl</Name>
@@ -21,6 +20,8 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="IBM4_Lib.py" />
+    <Compile Include="Sweep_Interval.py" />
     <Compile Include="uHeatCtrl.py" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
