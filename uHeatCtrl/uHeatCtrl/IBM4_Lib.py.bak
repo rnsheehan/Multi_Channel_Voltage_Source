@@ -415,16 +415,16 @@ class Ser_Iface(object):
         Inputs: 
         output_channel is one of A0, A1
         set_voltage is the desired voltage output value from the channel
-        set_voltage must be in the range [0.0, 3.3)
+        set_voltage must be in the range [0.0, 3.3]
         """
 
-        self.FUNC_NAME = ".WriteSingleChnnl()" # use this in exception handling messages
+        self.FUNC_NAME = ".WriteVoltage()" # use this in exception handling messages
         self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
         try:
             c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
             c2 = True if output_channel in self.Write_Chnnls else False # confirm that the output channel label is correct
-            c3 = True if set_voltage >= self.VMIN and set_voltage < self.VMAX else False # confirm that the set voltage value is in range
+            c3 = True if set_voltage >= self.VMIN and set_voltage < self.VMAX or abs(set_voltage - self.VMAX) < self.DELTA_VMIN else False # confirm that the set voltage value is in range
             c10 = c1 and c2 and c3 # if all conditions are true then write can proceed
         
             if c10:
@@ -438,7 +438,7 @@ class Ser_Iface(object):
                 if not c2:
                     self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\noutput_channel outside range {A0, A1}'
                 if not c3:
-                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nset_voltage outside range [0.0, 3.2]'
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nset_voltage %(v1)0.3f outside range [0.0, 3.3]'%{"v1":set_voltage}
                 raise Exception
         except Exception as e:
             print(self.ERR_STATEMENT)
@@ -1414,7 +1414,7 @@ class Ser_Iface(object):
         # this will make the code much cleaner
         # R. Sheehan 22 - 7 - 2024
 
-        self.FUNC_NAME = ".SingleChannelSweep()" # use this in exception handling messages
+        self.FUNC_NAME = ".SingleChannelSweepA()" # use this in exception handling messages
         self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
         try:
@@ -1442,7 +1442,8 @@ class Ser_Iface(object):
                 print('Sweeping voltage on Analog Output:',swp_channel)
                 print('Fixed voltage of',v_fixed,'(V) on Analog Output:',fixed_channel,'\n')
                 count = 0
-                while v_set < v_end:
+                #while v_set < v_end:
+                for i in range(0, no_steps, 1):
                     step_data = numpy.array([]) # instantiate an empty numpy array to hold the data for each step of the sweep
                     self.WriteVoltage(swp_channel, v_set) # set the voltage at the analog output channel
                     time.sleep(DELAY) # Apply a fixed delay
@@ -1465,7 +1466,7 @@ class Ser_Iface(object):
                 if not c2:
                     self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\noutput_channel outside range {A0, A1}'
                 if not c3 or not c4 or not c5:
-                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nvoltage sweep bounds not appropriate for range [0.0, 3.3)'
+                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nvoltage sweep bounds not appropriate for range [0.0, 3.3]'
                 if not c6:
                     self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not write to instrument\nn_steps not defined correctly'
                 if not c7:
@@ -1509,7 +1510,7 @@ class Ser_Iface(object):
         # Might not be too bad if I wrote another method to help the user unpack the A2x, A3x, A4x, A5x, D2x readings
         # R. Sheehan 23 - 7 - 2024
 
-        self.FUNC_NAME = ".SingleChannelSweep()" # use this in exception handling messages
+        self.FUNC_NAME = ".SingleChannelSweepB()" # use this in exception handling messages
         self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
 
         try:       
@@ -1517,7 +1518,7 @@ class Ser_Iface(object):
             c2 = True if swp_channel in self.Write_Chnnls else False # confirm that the output channel label is correct             
             c3 = voltage_interval.defined # check that the parameters in the interval have been defined correctly
             c7 = True if no_averages > 3 and no_averages < 103 else False # confirm that no. averages being taken is a sensible value
-            c8 = True if v_fixed >= self.VMIN and v_fixed < self.VMAX else False # confirm that the fixed voltage is in range
+            c8 = True if v_fixed >= self.VMIN and v_fixed <= self.VMAX else False # confirm that the fixed voltage is in range
             c10 = c1 and c2 and c3 and c7 and c8
         
             if c10:
@@ -1533,7 +1534,8 @@ class Ser_Iface(object):
                 print('Sweeping voltage on Analog Output:',swp_channel)
                 print('Fixed voltage of',v_fixed,'(V) on Analog Output:',fixed_channel,'\n')
                 count = 0
-                while v_set < voltage_interval.stop:
+                #while v_set < voltage_interval.stop:
+                for i in range(0, voltage_interval.Nsteps, 1):
                     step_data = numpy.array([]) # instantiate an empty numpy array to hold the data for each step of the sweep
                     self.WriteVoltage(swp_channel, v_set) # set the voltage at the analog output channel
                     time.sleep(DELAY) # Apply a fixed delay
