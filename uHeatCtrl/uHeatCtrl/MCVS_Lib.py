@@ -216,7 +216,8 @@ def Calibrate_Single_Channel_Processing(brdName, pwmChnnl, calData, loud = False
 
             args.fig_name = '%(v1)s_Pin_%(v2)s_Cal_Curve'%{"v1":brdName, "v2":pwmChnnl}
 
-            Plotting.plot_single_linear_fit_curve(calData[:,0], calData[:,1], args)
+            #Plotting.plot_single_linear_fit_curve(calData[:,0], calData[:,1], args)
+            Plotting.plot_single_linear_fit_curve_with_errors(calData[:,0], calData[:,1], calData[:,2], args)
         else:
             if c1 != True: ERR_STATEMENT += "\ncalData is empty"
             raise Exception
