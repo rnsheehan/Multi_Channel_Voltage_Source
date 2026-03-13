@@ -10,18 +10,7 @@ R. Sheehan 12 - 3 - 2024
 
 # import packages
 import os
-import sys
-import glob
-import re
-import serial # this package is actually called pyserial, install using py -m pip install pyserial
-import time
-import numpy
-import math
-import Common
-import Plotting
-import Sweep_Interval
-import IBM4_Lib # IBM4 interface based on Serial
-
+import MCVS_Lib
 
 MOD_NAME_STR = "uHeatCtrl"
 
@@ -34,3 +23,5 @@ if __name__ == '__main__':
     pwd = os.getcwd() # get current working directory
 
     print(pwd)
+
+    MCVS_Lib.Four_Channel_Calibration(["D9"])

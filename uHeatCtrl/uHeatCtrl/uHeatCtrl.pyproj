@@ -21,6 +21,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="IBM4_Lib.py" />
+    <Compile Include="MCVS_Hacking.py" />
+    <Compile Include="MCVS_Lib.py" />
+    <Compile Include="NI_DAQ_Lib.py" />
     <Compile Include="Sweep_Interval.py" />
     <Compile Include="uHeatCtrl.py" />
   </ItemGroup>

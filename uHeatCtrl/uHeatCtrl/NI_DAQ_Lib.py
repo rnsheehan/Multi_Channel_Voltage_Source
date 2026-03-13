@@ -35,7 +35,6 @@ import scipy
 import time
 import nidaqmx
 import nitypes
-import datetime
 import random
 
 import Sweep_Interval
