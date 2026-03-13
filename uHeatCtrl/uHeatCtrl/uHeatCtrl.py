@@ -24,4 +24,8 @@ if __name__ == '__main__':
 
     print(pwd)
 
-    MCVS_Lib.Multi_Channel_Calibration(["D9", "D10"])
+    #MCVS_Lib.Multi_Channel_Calibration(["D9", "D10"])
+
+    #MCVS_Lib.Get_Volt_Vals(4, 0, 5, True)
+
+    MCVS_Lib.Board_Operation('Four_Channel_PCB')

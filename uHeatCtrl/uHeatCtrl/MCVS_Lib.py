@@ -7,11 +7,13 @@ R. Sheehan 12 - 3 - 2026
 MOD_NAME_STR = "MCVS_Lib"
 
 # import packages
+from asyncio.windows_events import ERROR_CONNECTION_ABORTED
 import os
 import glob
 import time
 import numpy
 import scipy
+import random
 import Common
 import Plotting
 import Sweep_Interval
@@ -25,6 +27,8 @@ def Multi_Channel_Calibration(pwmPins = ["D9", "D10", "D11", "D12"]):
     Calibration is performed using NI-DAQ, which limits the number of channels that can be calibrated at any one time to 4
     Calibration is performed sequentially on each channel, while other channels are at ground
 
+    Inputs
+    pwmPins (type: str list) list containing the names of the PWM pins being calibrated
 
     R. Sheehan 12 - 3 - 2026
     """
@@ -71,10 +75,10 @@ def Multi_Channel_Calibration(pwmPins = ["D9", "D10", "D11", "D12"]):
 
             # Loop over the pwmPins list
             for p in range(0, len(pwmPins), 1):
-                physical_channel_str = 'Dev2/ai%(v1)d'%{"v1":p}
-                Calibrate_Single_Channel(board_name, pwmPins[p], the_interval, the_dev, physical_channel_str, device_name, True)
+                physical_channel_str = '%(v1)s/ai%(v2)d'%{"v1":device_name, "v2":p}
+                Calibrate_Single_Channel(board_name, pwmPins[p], the_interval, the_dev, physical_channel_str, device_name)
 
-            MOVE_FILES = True
+            MOVE_FILES = False
             if MOVE_FILES:
                 # This can be optional
                 # Move the files to a more convenient location
@@ -152,12 +156,14 @@ def Calibrate_Single_Channel(brdName, pwmChnnl, swpIntrvl:Sweep_Interval.SweepSp
             cal_data = numpy.zeros((swpIntrvl.Nsteps, 3))
 
             pwmVal = swpIntrvl.start
+            
+            print("\nCalibrating on pin:",pwmChnnl)
             for i in range(0, swpIntrvl.Nsteps, 1):
-                print("Writing PWM =",pwmVal)
+                if loud: print("Writing PWM =",pwmVal)
 
                 uCtrlObj.WriteAnyPWM(pwmChnnl, pwmVal)
                 
-                time.sleep(1) # Give the output time to settle
+                time.sleep(2) # Give the output time to settle
 
                 # read the available data
                 data = ai_task.read(nidaqmx.constants.READ_ALL_AVAILABLE)
@@ -246,19 +252,21 @@ def Calibrate_Single_Channel_Processing(brdName, pwmChnnl, calData, loud = False
         print(ERR_STATEMENT)
         print(e)
 
-def Board_Operation(pwmPins = ["D9", "D10", "D11", "D12"]):
+def Board_Operation(brdName, pwmPins = ["D9", "D10", "D11", "D12"], includeIBM4read = False, loud = False):
 
     """
     Routine for operating a multi-channel micro-controller voltage source
 
     Inputs
-    pins is an array of strings identifying the operational channels
-    volts is an array of floats specifying the voltage values to be output on each channel
+    brdName (type: string) label for whichever board is being tested
+    pwmPins (type: str list) list containing the names of the PWM pins being calibrated
 
+    R. Sheehan 13 - 3 - 2026
     """
 
     # Will need to know which channels are operational
     # Will need to know the calibration curve data for each channel
+    # Try to set this up with some kind of interruptable loop so that the values can be changed without comms having to be constantly reset
 
     FUNC_NAME = ".Board_Operation()" # use this in exception handling messages
     ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
@@ -267,11 +275,110 @@ def Board_Operation(pwmPins = ["D9", "D10", "D11", "D12"]):
          # instantiate an object that interfaces with the IBM4
         the_dev = IBM4_Lib.Ser_Iface() # this version should find the first connected IBM4
 
-        if the_dev.CommsStatus():
+        lower = 0.0
+        upper = 5.0
+        noPins = len(pwmPins) # record the no. pins required
+
+        c1 = the_dev.CommsStatus()
+        c2 = noPins > 0 and noPins < 9
+        c10 = c1 and c2
+
+        if c10:
             the_dev.ZeroIBM4()
 
+            try:
+                while True:
+                    input("\nPress Enter to proceed with voltage selection. \nPress Ctrl+C to stop.\n")
+                    # Create an array for holding the voltage values
+                    voltVals = Get_Volt_Vals(noPins, lower, upper, True)
+
+                    # Write the voltage values to the PCB
+                    #Assign_Volt_Vals(brdName, pwmPins, voltVals, the_dev)
+
+            except KeyboardInterrupt:
+                    # Ordinarily, you can ignore any errors associated with KeyboardInterrupt, use pass to ignore them
+                    # Release the resources associated with IBM4 after KeyboardInterrupt
+                    the_dev.ZeroIBM4()
+                    pass
         else:
-            pass
+            if not c1: ERR_STATEMENT += "\nCould not instantiate IBM4 object"
+            if not c2: ERR_STATEMENT += "\nNo. pwm pins is outside range [1, 8]"
+            raise Exception
+    except Exception as e:
+        print(ERR_STATEMENT)
+        print(e)
+
+def Get_Volt_Vals(noVals, limLow = 0.0, limHigh = 5.0, randomVals = False):
+    """
+    Method for populating a numpy array using keyboard input
+    Values entered will be forced between limits limLow <= X <= limHigh
+    Alternatively, a set of random voltages between limits limLow <= X <= limHigh can be assigned
+
+    R. Sheehan 13 - 3 - 2026
+    """
+
+    FUNC_NAME = ".Get_Volt_Vals()" # use this in exception handling messages
+    ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
+
+    try:
+        c1 = noVals > 0 and noVals < 9
+
+        if c1:
+            voltVals = numpy.zeros(noVals)
+            if not randomVals:
+                # let user specify voltVals
+                print("Please enter %(v1)d voltage values in the range [ %(v2)0.1f, %(v3)0.1f ]"%{"v1":noVals, "v2":limLow, "v3":limHigh})
+                for i in range(0, noVals, 1):
+                    qry_str = "Voltage %(v1)d: "%{"v1":i}
+                    value = float( input( qry_str ) )
+                    # Force input value into the range [ limLow, limHigh ]
+                    voltVals[i] = min( max(limLow, value), limHigh)
+            else:
+                # randomly assign values to voltVals
+                print("Generating %(v1)d random voltage values in the range [ %(v2)0.1f, %(v3)0.1f ]"%{"v1":noVals, "v2":limLow, "v3":limHigh})
+                random.seed() # seed the rng with the current system time
+                for i in range(0, noVals, 1):
+                    voltVals[i] = limLow + (limHigh - limLow) * random.random() # generate random number in range [limLow, limHigh] using formula a + (b - a) * random()
+            print("Voltage set values:",voltVals)
+
+            return voltVals
+        else:
+            if not c1: ERR_STATEMENT += "\nNo. voltage values is outside range [1, 8]"
+            raise Exception
+    except Exception as e:
+        print(ERR_STATEMENT)
+        print(e)
+
+def Assign_Volt_Vals(brdName, pwmPins, voltVals, uCtrlObj:IBM4_Lib.Ser_Iface):
+    """
+    Assign the desired voltage values to the pins
+
+    R. Sheehan 13 - 3 - 2026
+    """
+
+    FUNC_NAME = ".Board_Operation()" # use this in exception handling messages
+    ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
+
+    try:
+        c1 = brdName != ''
+        c2 = len(pwmPins) > 0
+        c3 = len(voltVals) == len(pwmPins)
+        c4 = uCtrlObj.CommsStatus()
+        c10 = c1 and c2 and c3 and c4
+
+        if c10:
+            # Read the calibration curve data for PCB brdName
+
+            for i in range(0, len(pwmPins), 1):
+                # compute the PWM percentage value from the calibration curve data
+                pcVal = 50
+                uCtrlObj.WriteAnyPWM(pwmPins[i], pcVal)
+        else:
+            if not c1: ERR_STATEMENT += "\nbrdName is not defined"
+            if not c2: ERR_STATEMENT += "\npwmPins is not defined"
+            if not c3: ERR_STATEMENT += "\nvoltVals is not defined"
+            if not c4: ERR_STATEMENT += "\nuCtrlObj object is not defined"
+            raise Exception
     except Exception as e:
         print(ERR_STATEMENT)
         print(e)
