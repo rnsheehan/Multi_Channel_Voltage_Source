@@ -19,11 +19,12 @@ import IBM4_Lib # IBM4 interface based on Serial
 import nidaqmx
 import NI_DAQ_Lib
 
-def Four_Channel_Calibration(testPins = ["D9", "D10", "D11", "D12"], includeIBM4read = False):
+def Multi_Channel_Calibration(pwmPins = ["D9", "D10", "D11", "D12"]):
     """
-    Calibration routine for 4-channels of the Micro-Controller Voltage Source
-    Calibration is performed using NI-DAQ, and where possible IBM4
+    Calibration routine for multiple-channels of the Micro-Controller Voltage Source
+    Calibration is performed using NI-DAQ, which limits the number of channels that can be calibrated at any one time to 4
     Calibration is performed sequentially on each channel, while other channels are at ground
+
 
     R. Sheehan 12 - 3 - 2026
     """
@@ -48,7 +49,11 @@ def Four_Channel_Calibration(testPins = ["D9", "D10", "D11", "D12"], includeIBM4
          # instantiate an object that interfaces with the IBM4
         the_dev = IBM4_Lib.Ser_Iface() # this version should find the first connected IBM4
 
-        if the_dev.CommsStatus():
+        c1 = the_dev.CommsStatus()
+        c2 = len(pwmPins) > 0 and len(pwmPins) < 5
+        c10 = c1 and c2
+
+        if c10:
             # Board Name
             board_name = 'Four_Channel_PCB'
 
@@ -64,10 +69,10 @@ def Four_Channel_Calibration(testPins = ["D9", "D10", "D11", "D12"], includeIBM4
             v_end = 91.0 # this should be equivalent to 3V output
             the_interval = Sweep_Interval.SweepSpace(no_steps, v_start, v_end)
 
-            # Loop over the testPins list
-            for p in range(0, len(testPins), 1):
+            # Loop over the pwmPins list
+            for p in range(0, len(pwmPins), 1):
                 physical_channel_str = 'Dev2/ai%(v1)d'%{"v1":p}
-                Calibrate_Single_Channel(board_name, testPins[p], the_interval, the_dev, physical_channel_str, device_name, True)
+                Calibrate_Single_Channel(board_name, pwmPins[p], the_interval, the_dev, physical_channel_str, device_name, True)
 
             MOVE_FILES = True
             if MOVE_FILES:
@@ -84,7 +89,8 @@ def Four_Channel_Calibration(testPins = ["D9", "D10", "D11", "D12"], includeIBM4
                 png_files = glob.glob("%(v1)s*.png"%{"v1":board_name})
                 Common.Move_Files(DATA_HOME, png_files)
         else:
-            ERR_STATEMENT += "\nCould not instantiate IBM4 object"
+            if not c1: ERR_STATEMENT += "\nCould not instantiate IBM4 object"
+            if not c2: ERR_STATEMENT += "\nNo. pwm pins is outside range [1, 4]"
             raise Exception
     except Exception as e:
         print(ERR_STATEMENT)
@@ -240,7 +246,7 @@ def Calibrate_Single_Channel_Processing(brdName, pwmChnnl, calData, loud = False
         print(ERR_STATEMENT)
         print(e)
 
-def Board_Operation():
+def Board_Operation(pwmPins = ["D9", "D10", "D11", "D12"]):
 
     """
     Routine for operating a multi-channel micro-controller voltage source

@@ -24,4 +24,4 @@ if __name__ == '__main__':
 
     print(pwd)
 
-    MCVS_Lib.Four_Channel_Calibration(["D9", "D10"])
+    MCVS_Lib.Multi_Channel_Calibration(["D9", "D10"])
