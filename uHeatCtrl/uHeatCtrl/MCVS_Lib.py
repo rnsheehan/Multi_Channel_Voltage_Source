@@ -8,9 +8,11 @@ MOD_NAME_STR = "MCVS_Lib"
 
 # import packages
 import os
+import glob
 import time
 import numpy
 import scipy
+import Common
 import Plotting
 import Sweep_Interval
 import IBM4_Lib # IBM4 interface based on Serial
@@ -50,8 +52,7 @@ def Four_Channel_Calibration(testPins = ["D9", "D10", "D11", "D12"], includeIBM4
             # Board Name
             board_name = 'Four_Channel_PCB'
 
-            # Instantiate the NI-DAQ object
-            physical_channel_str = 'Dev2/ai0'
+            # Name of the NI-DAQ
             device_name = 'Dev2'
 
             # Ground the IBM4 object
@@ -64,9 +65,24 @@ def Four_Channel_Calibration(testPins = ["D9", "D10", "D11", "D12"], includeIBM4
             the_interval = Sweep_Interval.SweepSpace(no_steps, v_start, v_end)
 
             # Loop over the testPins list
-            for p in testPins:
-                Calibrate_Single_Channel(board_name, p, the_interval, the_dev, physical_channel_str, device_name, True)
+            for p in range(0, len(testPins), 1):
+                physical_channel_str = 'Dev2/ai%(v1)d'%{"v1":p}
+                Calibrate_Single_Channel(board_name, testPins[p], the_interval, the_dev, physical_channel_str, device_name, True)
 
+            MOVE_FILES = True
+            if MOVE_FILES:
+                # This can be optional
+                # Move the files to a more convenient location
+                # The location must exist on your computer, otherwise the files won't be moved
+                DATA_HOME = 'c:/users/robertsheehan/Research/Electronics/uHeater_Control/'
+                #DATA_HOME = 'D:/Rob/Research/Electronics/uHeater_Control/'
+
+                txt_files = glob.glob("%(v1)s*.txt"%{"v1":board_name})
+
+                Common.Move_Files(DATA_HOME, txt_files)
+
+                png_files = glob.glob("%(v1)s*.png"%{"v1":board_name})
+                Common.Move_Files(DATA_HOME, png_files)
         else:
             ERR_STATEMENT += "\nCould not instantiate IBM4 object"
             raise Exception
@@ -152,7 +168,7 @@ def Calibrate_Single_Channel(brdName, pwmChnnl, swpIntrvl:Sweep_Interval.SweepSp
             ai_task.close()
 
             # process the calibration data
-            Calibrate_Single_Channel_Processing('Michael', pwmChnnl, cal_data, loud)
+            Calibrate_Single_Channel_Processing(brdName, pwmChnnl, cal_data, loud)
         else:
             if not c1: ERR_STATEMENT += "\nswpintrvl object is not defined"
             if not c2: ERR_STATEMENT += "\nuCtrlObj object is not defined"
@@ -216,7 +232,6 @@ def Calibrate_Single_Channel_Processing(brdName, pwmChnnl, calData, loud = False
 
             args.fig_name = '%(v1)s_Pin_%(v2)s_Cal_Curve'%{"v1":brdName, "v2":pwmChnnl}
 
-            #Plotting.plot_single_linear_fit_curve(calData[:,0], calData[:,1], args)
             Plotting.plot_single_linear_fit_curve_with_errors(calData[:,0], calData[:,1], calData[:,2], args)
         else:
             if c1 != True: ERR_STATEMENT += "\ncalData is empty"
