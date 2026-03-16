@@ -20,6 +20,7 @@ import Sweep_Interval
 import IBM4_Lib # IBM4 interface based on Serial
 import nidaqmx
 import NI_DAQ_Lib
+import pandas
 
 def Multi_Channel_Calibration(pwmPins = ["D9", "D10", "D11", "D12"]):
     """
@@ -225,9 +226,22 @@ def Calibrate_Single_Channel_Processing(brdName, pwmChnnl, calData, loud = False
             # Export the computed cal curves to a file for future reference
             filename = '%(v1)s_Cal_Curves.txt'%{"v1":brdName}
             # open a file for writing, create file if necessary
-            avg_file = open(filename, 'a' if os.path.exists(filename) else 'w')
+            #avg_file = open(filename, 'a' if os.path.exists(filename) else 'w')
+            writeTitle = False
+            if os.path.exists(filename):
+                # open the file in append mode
+                avg_file = open(filename, 'a')
+            else:
+                # open /create the file in write mode
+                writeTitle = True
+                avg_file = open(filename, 'w')
+            title_str = r'Pin, Slope (V / %), Intercept (V)'
             out_str = '%(v1)s, %(v2)0.9f, %(v3)0.9f\n'%{"v1":pwmChnnl, "v2":model.slope, "v3":model.intercept}
             if loud: print('\n'+out_str)
+            # put the titles at the tope of the file when writing to the file for the first time
+            if writeTitle:
+                avg_file.write(title_str)
+                writeTitle = False
             avg_file.write(out_str)
             avg_file.close()            
 
@@ -286,6 +300,9 @@ def Board_Operation(brdName, pwmPins = ["D9", "D10", "D11", "D12"], includeIBM4r
         if c10:
             the_dev.ZeroIBM4()
 
+            # Read the calibration curve data for PCB brdName
+            calData = Get_Cal_Curve_Data(brdName)
+
             try:
                 while True:
                     input("\nPress Enter to proceed with voltage selection. \nPress Ctrl+C to stop.\n")
@@ -293,7 +310,7 @@ def Board_Operation(brdName, pwmPins = ["D9", "D10", "D11", "D12"], includeIBM4r
                     voltVals = Get_Volt_Vals(noPins, lower, upper, True)
 
                     # Write the voltage values to the PCB
-                    #Assign_Volt_Vals(brdName, pwmPins, voltVals, the_dev)
+                    Assign_Volt_Vals(calData, pwmPins, voltVals, the_dev)
 
             except KeyboardInterrupt:
                     # Ordinarily, you can ignore any errors associated with KeyboardInterrupt, use pass to ignore them
@@ -349,7 +366,101 @@ def Get_Volt_Vals(noVals, limLow = 0.0, limHigh = 5.0, randomVals = False):
         print(ERR_STATEMENT)
         print(e)
 
-def Assign_Volt_Vals(brdName, pwmPins, voltVals, uCtrlObj:IBM4_Lib.Ser_Iface):
+def Get_Cal_Curve_Data(brdName):
+
+    """
+    Read the calibration curve data from file
+
+    Input
+    brdName (type str) string for identifying the cal-curve data for a particular board
+    cal-data is stored in file with name in the form calFile = '%(v1)s_Cal_Curves.txt'%{"v1":brdName}
+
+    Outputs
+    calData (type data frame) with data stored in the form [pins, slopes, intercepts]
+    
+    pins is a list of strings indicating which pins have been calibrated
+    slopes, intercepts are numpy arrays containing the cal-curve values for each pin
+    cal-curve is linear of the form V = m PWM + c
+
+    R. Sheehan 16 - 3 - 2026
+    """
+
+    FUNC_NAME = ".Get_Cal_Curve_Data()" # use this in exception handling messages
+    ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
+
+    try:
+        calFile = '%(v1)s_Cal_Curves.txt'%{"v1":brdName}
+        c1 = brdName != ''
+        c2 = os.path.exists(calFile)
+        c10 = c1 and c2
+
+        if c10:
+            # Read the data into memory from the file, treat the data as a data frame
+            # Data is stored in the file in the form
+            # out_str = '%(v1)s, %(v2)0.9f, %(v3)0.9f\n'%{"v1":pwmChnnl, "v2":model.slope, "v3":model.intercept}
+            calData = pandas.read_csv(calFile)
+
+            # Could return the data as individual items, but why bother
+            # Just use the dataFrame to do the computations that you need since you have to keep all the data in memory anyway
+            # titles = list(data)
+            # pins = data[titles[0]].to_list() 
+            # slopes = data[titles[1]].to_numpy() 
+            # intercepts = data[titles[2]].to_numpy() 
+
+            return calData
+        else:
+            if not c1: ERR_STATEMENT += "\nbrdName is not defined"
+            if not c2: ERR_STATEMENT += "\n%(v1)s cannot be found"%{"v1":calFile}
+            raise Exception
+    except Exception as e:
+        print(ERR_STATEMENT)
+        print(e)
+
+def Get_PWM_From_Cal_Data(calDF, pwmPin, voltVal):
+    """
+    Compute the PWM value needed to generate a desired voltage value
+
+    Inputs
+    calDF (type data frame) DF containing the cal-curve data
+    
+    
+    R. Sheehan 16 - 3 - 2026
+    """
+
+    FUNC_NAME = ".Get_PWM_From_Cal_Data()" # use this in exception handling messages
+    ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
+
+    try:
+        c1 = not calDF.empty
+
+        if c1:
+            titles = list(calDF)
+
+            # alternatively convert the DF data to lists and work from that
+            # pins = data[titles[0]].to_list() 
+            # slopes = data[titles[1]].to_numpy() 
+            # intercepts = data[titles[2]].to_numpy() 
+
+            if pwmPin in calDF[titles[0]].values:
+                # Extract the DF subset that contains the cal-data for pwmPin
+                x = calDF.loc[calDF[titles[0]] == pwmPin]
+                # extract cal-curve data for pwmPin
+                slope = x[ titles[1] ].values[0]
+                intercept = x[ titles[2] ].values[0]
+                # compute pwmVal by inverting the cal-curve
+                pwmVal = (voltVal / slope) - (intercept / slope)
+                return pwmVal
+            else:
+                ERR_STATEMENT += "\nCalibration data not available for %(v1)s"%{"v1":pwmPin}
+                raise Exception
+        else:
+            if not c1: ERR_STATEMENT += "\ncalDF is empty, calculation cannot proceed"
+            raise Exception
+    except Exception as e:
+        print(ERR_STATEMENT)
+        print(e)
+
+def Assign_Volt_Vals(calDF, pwmPins, voltVals, uCtrlObj:IBM4_Lib.Ser_Iface):
     """
     Assign the desired voltage values to the pins
 
@@ -360,21 +471,20 @@ def Assign_Volt_Vals(brdName, pwmPins, voltVals, uCtrlObj:IBM4_Lib.Ser_Iface):
     ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
 
     try:
-        c1 = brdName != ''
+        c1 = not calDF.empty
         c2 = len(pwmPins) > 0
         c3 = len(voltVals) == len(pwmPins)
         c4 = uCtrlObj.CommsStatus()
         c10 = c1 and c2 and c3 and c4
 
         if c10:
-            # Read the calibration curve data for PCB brdName
-
+            # Assign the voltage value to the pins
             for i in range(0, len(pwmPins), 1):
                 # compute the PWM percentage value from the calibration curve data
-                pcVal = 50
+                pcVal = Get_PWM_From_Cal_Data(calDF, pwmPins[i], voltVals[i])
                 uCtrlObj.WriteAnyPWM(pwmPins[i], pcVal)
         else:
-            if not c1: ERR_STATEMENT += "\nbrdName is not defined"
+            if not c1: ERR_STATEMENT += "\ncalDF is empty, calculation cannot proceed"
             if not c2: ERR_STATEMENT += "\npwmPins is not defined"
             if not c3: ERR_STATEMENT += "\nvoltVals is not defined"
             if not c4: ERR_STATEMENT += "\nuCtrlObj object is not defined"

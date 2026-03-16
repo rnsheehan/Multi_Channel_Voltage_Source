@@ -28,4 +28,8 @@ if __name__ == '__main__':
 
     #MCVS_Lib.Get_Volt_Vals(4, 0, 5, True)
 
-    MCVS_Lib.Board_Operation('Four_Channel_PCB')
+    #MCVS_Lib.Board_Operation('Four_Channel_PCB')
+
+    calData = MCVS_Lib.Get_Cal_Curve_Data('Sample')
+
+    MCVS_Lib.Get_PWM_From_Cal_Data(calData, "D9", 2.5)
