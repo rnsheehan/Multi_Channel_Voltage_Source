@@ -24,12 +24,12 @@ if __name__ == '__main__':
 
     print(pwd)
 
-    #MCVS_Lib.Multi_Channel_Calibration(["D9", "D10"])
+    #MCVS_Lib.Multi_Channel_Calibration(["D7", "D9", "D10", "D11"])
 
     #MCVS_Lib.Get_Volt_Vals(4, 0, 5, True)
 
-    #MCVS_Lib.Board_Operation('Four_Channel_PCB')
+    MCVS_Lib.Board_Operation('Four_Channel_PCB', ["D7", "D11"], True)
 
-    calData = MCVS_Lib.Get_Cal_Curve_Data('Sample')
+    #calData = MCVS_Lib.Get_Cal_Curve_Data('Sample')
 
-    MCVS_Lib.Get_PWM_From_Cal_Data(calData, "D9", 2.5)
+    #MCVS_Lib.Get_PWM_From_Cal_Data(calData, "D9", 2.5)

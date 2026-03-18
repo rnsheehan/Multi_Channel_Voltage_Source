@@ -63,13 +63,13 @@ def Multi_Channel_Calibration(pwmPins = ["D9", "D10", "D11", "D12"]):
             board_name = 'Four_Channel_PCB'
 
             # Name of the NI-DAQ
-            device_name = 'Dev2'
+            device_name = 'Dev1'
 
             # Ground the IBM4 object
             the_dev.ZeroIBM4()
 
             # instantiate an object to keep track of the sweep space parameters
-            no_steps = 11
+            no_steps = 51
             v_start = 0.0
             v_end = 91.0 # this should be equivalent to 3V output
             the_interval = Sweep_Interval.SweepSpace(no_steps, v_start, v_end)
@@ -123,7 +123,7 @@ def Calibrate_Single_Channel(brdName, pwmChnnl, swpIntrvl:Sweep_Interval.SweepSp
     # Will need to know which channels are operational
     # Will need to know the calibration curve data for each channel
 
-    FUNC_NAME = ".Sweep_Single_Channel()" # use this in exception handling messages
+    FUNC_NAME = ".Calibrate_Single_Channel()" # use this in exception handling messages
     ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
 
     try:
@@ -177,6 +177,8 @@ def Calibrate_Single_Channel(brdName, pwmChnnl, swpIntrvl:Sweep_Interval.SweepSp
                     print(out_str)
 
                 pwmVal += swpIntrvl.delta
+
+            uCtrlObj.WriteAnyPWM(pwmChnnl, 0.0) # reset PWM val to 0.0
 
             ai_task.close()
 
@@ -235,7 +237,7 @@ def Calibrate_Single_Channel_Processing(brdName, pwmChnnl, calData, loud = False
                 # open /create the file in write mode
                 writeTitle = True
                 avg_file = open(filename, 'w')
-            title_str = r'Pin, Slope (V / %), Intercept (V)'
+            title_str = r'Pin, Slope (V / %), Intercept (V)\n'
             out_str = '%(v1)s, %(v2)0.9f, %(v3)0.9f\n'%{"v1":pwmChnnl, "v2":model.slope, "v3":model.intercept}
             if loud: print('\n'+out_str)
             # put the titles at the tope of the file when writing to the file for the first time
@@ -253,7 +255,7 @@ def Calibrate_Single_Channel_Processing(brdName, pwmChnnl, calData, loud = False
             # https://www.geeksforgeeks.org/python/different-ways-to-escape-percent-in-python-strings/
             args.x_label = r'PWM value ( % )' 
             args.y_label = 'Output Voltage ( V )'
-            args.curve_label = r'V$_{out}$ = %(v1)0.2f PWM %(v2)s %(v3)0.2f'%{"v1":model.slope, "v2":'+' if model.intercept > 0 else '-', "v3":abs(model.intercept)}
+            args.curve_label = r'V$_{out}$ = %(v1)0.4f PWM %(v2)s %(v3)0.4f'%{"v1":model.slope, "v2":'+' if model.intercept > 0 else '-', "v3":abs(model.intercept)}
             args.plt_range = [0, 100, 0, 6]
 
             args.fig_name = '%(v1)s_Pin_%(v2)s_Cal_Curve'%{"v1":brdName, "v2":pwmChnnl}
@@ -311,6 +313,9 @@ def Board_Operation(brdName, pwmPins = ["D9", "D10", "D11", "D12"], includeIBM4r
 
                     # Write the voltage values to the PCB
                     Assign_Volt_Vals(calData, pwmPins, voltVals, the_dev)
+
+                    # Read the assigned values using the IBM4 itself, only possible for 'Four_Channel_PCB'
+                    Perform_IBM4_Read(pwmPins, the_dev)
 
             except KeyboardInterrupt:
                     # Ordinarily, you can ignore any errors associated with KeyboardInterrupt, use pass to ignore them
@@ -442,6 +447,8 @@ def Get_PWM_From_Cal_Data(calDF, pwmPin, voltVal):
             # intercepts = data[titles[2]].to_numpy() 
 
             if pwmPin in calDF[titles[0]].values:
+                pcValMin = 0.0 # lower bound for PWM val
+                pcValMax = 91.0 # upper bound for PWM val
                 # Extract the DF subset that contains the cal-data for pwmPin
                 x = calDF.loc[calDF[titles[0]] == pwmPin]
                 # extract cal-curve data for pwmPin
@@ -449,7 +456,8 @@ def Get_PWM_From_Cal_Data(calDF, pwmPin, voltVal):
                 intercept = x[ titles[2] ].values[0]
                 # compute pwmVal by inverting the cal-curve
                 pwmVal = (voltVal / slope) - (intercept / slope)
-                return pwmVal
+                # ensure that pwmVal is selected within appropriate bounds
+                return min( pcValMax, max( pcValMin, pwmVal ) )
             else:
                 ERR_STATEMENT += "\nCalibration data not available for %(v1)s"%{"v1":pwmPin}
                 raise Exception
@@ -483,10 +491,59 @@ def Assign_Volt_Vals(calDF, pwmPins, voltVals, uCtrlObj:IBM4_Lib.Ser_Iface):
                 # compute the PWM percentage value from the calibration curve data
                 pcVal = Get_PWM_From_Cal_Data(calDF, pwmPins[i], voltVals[i])
                 uCtrlObj.WriteAnyPWM(pwmPins[i], pcVal)
+            # time.sleep(1)
+            # reads = uCtrlObj.ReadAverageVoltageAllChnnl()
+            # print(2.0*reads)
+            #uCtrlObj.WritePWM(pcVal)
+            # diff_read = uCtrlObj.DiffReadAverage('A4', 'D2', 11)
+            # diff_read *= 2.0
+            # print(diff_read)
         else:
             if not c1: ERR_STATEMENT += "\ncalDF is empty, calculation cannot proceed"
             if not c2: ERR_STATEMENT += "\npwmPins is not defined"
             if not c3: ERR_STATEMENT += "\nvoltVals is not defined"
+            if not c4: ERR_STATEMENT += "\nuCtrlObj object is not defined"
+            raise Exception
+    except Exception as e:
+        print(ERR_STATEMENT)
+        print(e)
+
+def Perform_IBM4_Read(pwmPins, uCtrlObj:IBM4_Lib.Ser_Iface):
+    """
+    Use the IBM4 to perform a read operation on the PWM outputs
+    Note this is only possible where the PCB has been configured to enable this
+    For now only possible with 'Four_Channel_PCB'
+
+    R. Sheehan 18 - 3 - 2026
+    """
+
+    FUNC_NAME = ".Perform_IBM4_Read()" # use this in exception handling messages
+    ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
+
+    try:
+        c2 = len(pwmPins) > 0        
+        c4 = uCtrlObj.CommsStatus()
+        c10 = c2 and c4
+
+        if c10:
+            time.sleep(1)
+            diff_read = uCtrlObj.DiffReadAverage('A5', 'D2', 11)
+            diff_read *= 2.0
+            print(diff_read)
+
+            diff_read = uCtrlObj.DiffReadAverage('A2', 'D2', 11)
+            diff_read *= 2.0
+            print(diff_read)
+            
+            # readA5 = uCtrlObj.ReadSingleVoltage('A5')
+            # readD2 = uCtrlObj.ReadSingleVoltage('D2')
+            # print('Voltage output = ',readA5,",",readD2,",",readA5 - readD2)
+
+            # readings = uCtrlObj.ReadAverageVoltageAllChnnl()
+            # print(2.0*readings)
+
+        else:
+            if not c2: ERR_STATEMENT += "\npwmPins is not defined"
             if not c4: ERR_STATEMENT += "\nuCtrlObj object is not defined"
             raise Exception
     except Exception as e:

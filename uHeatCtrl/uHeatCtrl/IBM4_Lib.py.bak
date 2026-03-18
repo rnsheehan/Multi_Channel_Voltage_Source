@@ -146,7 +146,7 @@ class Ser_Iface(object):
         close the link to the instrument object when it goes out of scope
         """
         
-        if self.IBM4Port is not None and self.instr_obj.isOpen():
+        if self.IBM4Port != '' and self.instr_obj.isOpen():
             # close the link to the instrument object when it goes out of scope
             print('Closing Serial link with:',self.instr_obj.name)
             self.ZeroIBM4()
@@ -186,16 +186,16 @@ class Ser_Iface(object):
     #         print(self.ERR_STATEMENT)
     #         print(e)
 
-    def CommsStatus(self):
+    def CommsStatus(self, loud = False):
         """
         investigate the status of the serial comms link
         """
         
         if self.IBM4Port is not None and self.instr_obj.isOpen():
-            print('Communication with:',self.instr_obj.name,' is open')
+            if loud: print('Communication with:',self.instr_obj.name,' is open')
             return True
         else:
-            print('Communication with: IBM4 is not open')
+            if loud: print('Communication with: IBM4 is not open')
             return False
             
     def OpenComms(self, read_mode = 'DC'):
@@ -218,7 +218,7 @@ class Ser_Iface(object):
                 # this is necessary because when the IBM4 is connected the AO are set to arbitrary values
                 self.ZeroIBM4()
 
-                self.CommsStatus()
+                self.CommsStatus(loud = True)
             else:
                 self.ERR_STATEMENT = self.ERR_STATEMENT + '\nNo IBM4 attached to PC'
                 raise Exception
@@ -448,7 +448,7 @@ class Ser_Iface(object):
 
         """
         This method interfaces with the IBM4 to set a pulse wave modulated (PWM) output signal.
-        The output Pin# must be: 5,7,9,10-13.
+        The output Pin defaults to pin D9 for this method
         The PWM output must be between 0 and 100, and is a floating point value.
     
         instrument_obj is the open visa resource connected to dev_addr
