@@ -372,7 +372,6 @@ def Board_Operation(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], includeIBM4r
                     # Ordinarily, you can ignore any errors associated with KeyboardInterrupt, use pass to ignore them
                     # Release the resources associated with IBM4 after KeyboardInterrupt
                     the_dev.ZeroIBM4()
-                    pass
         else:
             if not c1: ERR_STATEMENT += "\nCould not instantiate IBM4 object"
             if not c2: ERR_STATEMENT += "\nNo. pwm pins is outside range [1, 8]"
