@@ -717,6 +717,69 @@ def AO_Random_Output(physical_channel_str = 'Dev2/ao0', device_name = 'Dev2', wa
 
 # Analog Input Methods
 
+def AI_DC_Read(physical_channel_str = 'Dev2/ai0:3', device_name = 'Dev2', loud = False):
+    """
+    Use NI-DAQ to perform single DC measurement
+
+    differential read is assumed on all channels
+
+    R. Sheehan 18 - 3 - 2026
+    """
+
+    FUNC_NAME = ".AI_DC_Read()" # use this in exception handling messages
+    ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
+
+    try:
+        c1 = True if physical_channel_str != '' else False
+        c2 = True if device_name != '' else False
+        c10 = c1 and c2
+
+        if c10:
+            # Configure the NI-DAQ for AI read
+
+            # Extract the sample rate per channel
+            ai_chn_str = physical_channel_str
+
+            ai_SR, ai_no_ch = Extract_Sample_Rate(ai_chn_str, device_name)
+
+            # Configure Analog Input
+            ai_task = nidaqmx.Task()        
+
+            # If ai_chn_str is not correctly defined an exception will be thrown by nidaqmx
+            ai_task.ai_channels.add_ai_voltage_chan(ai_chn_str, terminal_config = nidaqmx.constants.TerminalConfiguration.DIFF, 
+                                                    min_val = -10, max_val = +10)
+            
+            # Configure the sampling timing
+            # Note that when reading data later no. samples to be read must equal samps_per_chan as defined
+            # Otherwise an exception will be thrown by nidaqmx
+            ai_task.timing.cfg_samp_clk_timing(ai_SR, sample_mode = nidaqmx.constants.AcquisitionType.FINITE, 
+                                                samps_per_chan = ai_SR, active_edge = nidaqmx.constants.Edge.RISING)
+
+            # create arrays for storing measured data
+            avg_arr = numpy.zeros(ai_no_ch)
+            stdev_arr = numpy.zeros(ai_no_ch)
+            
+            # read the available data
+            data = ai_task.read(nidaqmx.constants.READ_ALL_AVAILABLE)
+            for i in range(0, ai_no_ch, 1):
+                avg = numpy.mean(data[i])
+                stdev = numpy.std(data[i], ddof = 1)
+                avg_arr[i] = avg
+                stdev_arr[i] = stdev
+                out_str = "ai%(v1)d: %(v2)0.4f +/- %(v3)0.4f ( V )"%{"v1":i, "v2":avg, "v3":stdev}
+                if loud: print(out_str)
+
+            # AI Channel Monitoring Measurement END
+            # Close off the ai_task
+            ai_task.close()
+        else:
+            if c1 is False: ERR_STATEMENT += '\nNo data contained in physical_channel_str'
+            if c2 is False: ERR_STATEMENT += '\nNo data contained in device_name'
+            raise Exception
+    except Exception as e:
+        print(ERR_STATEMENT)
+        print(e)
+
 def AI_Monitor(physical_channel_str = 'Dev2/ai0:3', device_name = 'Dev2', loud = False):
     """
     Use NI-DAQ to measure multiple real-time AI

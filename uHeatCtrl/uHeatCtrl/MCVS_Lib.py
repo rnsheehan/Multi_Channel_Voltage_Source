@@ -22,7 +22,46 @@ import nidaqmx
 import NI_DAQ_Lib
 import pandas
 
-def Multi_Channel_Calibration(pwmPins = ["D9", "D10", "D11", "D12"]):
+pwmChnnlList = {"D0":0, "D1":1, "D7":7, "D9":9, "D10":10, "D11":11, "D12":12, "D13":13}
+
+def Pin_Mapping(brdName = 'Four_Channel_PCB', voltChnnls = ['V1', 'V2', 'V3', 'V4']):
+
+    """
+    Map the voltage channels to the PWM pins on the IBM4 board
+    Use dictionary to create a general mapping
+
+    R. Sheehan 18 - 3 - 2026
+    """
+
+    FUNC_NAME = ".Pin_Mapping()" # use this in exception handling messages
+    ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
+
+    try:
+        if brdName == 'Four_Channel_PCB':
+            mapping = {'V1':'D7', 'V2':'D9', 'V3':'D10', 'V4':'D11'}
+            #return [mapping[v] for v in voltChnnls]
+        elif brdName == 'Eight_Channel_PCB':
+            mapping = {'V1':'D0', 'V2':'D1', 'V3':'D7', 'V4':'D9', 'V5':'D10', 'V6':'D11', 'V7':'D12', 'V8':'D13'}
+            #return [mapping[v] for v in voltChnnls]
+        else:
+            ERR_STATEMENT += '\nBoard: %(v1)s not recognised'%{"v1":brdName}
+            raise Exception
+        # select the pins that map V* onto PWM*
+        # general method to prevent duplicates
+        # an exception is thrown if voltChnnls contains inappropriate entry
+        seen = set()
+        pwmPins = []
+        for v in voltChnnls:
+            d = mapping[v]
+            if d not in seen:
+                seen.add(d)
+                pwmPins.append(d)
+        return pwmPins        
+    except Exception as e:
+        print(ERR_STATEMENT)
+        print(e)
+
+def Multi_Channel_Calibration(voltChnnls = ['V1', 'V2', 'V3', 'V4']):
     """
     Calibration routine for multiple-channels of the Micro-Controller Voltage Source
     Calibration is performed using NI-DAQ, which limits the number of channels that can be calibrated at any one time to 4
@@ -47,12 +86,13 @@ def Multi_Channel_Calibration(pwmPins = ["D9", "D10", "D11", "D12"]):
 
     # R. Sheehan 12 - 3 - 2026
 
-    FUNC_NAME = ".Four_Channel_Calibration()" # use this in exception handling messages
+    FUNC_NAME = ".Multi_Channel_Calibration()" # use this in exception handling messages
     ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
 
     try:
          # instantiate an object that interfaces with the IBM4
         the_dev = IBM4_Lib.Ser_Iface() # this version should find the first connected IBM4
+        pwmPins = Pin_Mapping(voltChnnls) # map voltage channels onto the IBM4 digital outputs
 
         c1 = the_dev.CommsStatus()
         c2 = len(pwmPins) > 0 and len(pwmPins) < 5
@@ -130,7 +170,8 @@ def Calibrate_Single_Channel(brdName, pwmChnnl, swpIntrvl:Sweep_Interval.SweepSp
         c1 = swpIntrvl.defined
         c2 = uCtrlObj.CommsStatus()
         c3 = pwmChnnl in uCtrlObj.PWM_Chnnls
-        c10 = c1 and c2 and c3
+        c4 = brdName != ''
+        c10 = c1 and c2 and c3 and c4
 
         if c10:
             # Configure the NI-DAQ for AI read
@@ -213,7 +254,10 @@ def Calibrate_Single_Channel_Processing(brdName, pwmChnnl, calData, loud = False
     ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
 
     try:
-        c1 = True if len(calData) > 0 else False
+        c1 = brdName != ''
+        c2 = pwmChnnl in pwmChnnlList
+        c3 = len(calData) > 0
+        c10 = c1 and c2 and c3
 
         if c1:
             # Export the data to memory
@@ -262,13 +306,13 @@ def Calibrate_Single_Channel_Processing(brdName, pwmChnnl, calData, loud = False
 
             Plotting.plot_single_linear_fit_curve_with_errors(calData[:,0], calData[:,1], calData[:,2], args)
         else:
-            if c1 != True: ERR_STATEMENT += "\ncalData is empty"
+            if not c1: ERR_STATEMENT += "\ncalData is empty"
             raise Exception
     except Exception as e:
         print(ERR_STATEMENT)
         print(e)
 
-def Board_Operation(brdName, pwmPins = ["D9", "D10", "D11", "D12"], includeIBM4read = False, loud = False):
+def Board_Operation(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], includeIBM4read = False, includeNIDAQread = False, loud = False):
 
     """
     Routine for operating a multi-channel micro-controller voltage source
@@ -290,6 +334,8 @@ def Board_Operation(brdName, pwmPins = ["D9", "D10", "D11", "D12"], includeIBM4r
     try:
          # instantiate an object that interfaces with the IBM4
         the_dev = IBM4_Lib.Ser_Iface() # this version should find the first connected IBM4
+
+        pwmPins = Pin_Mapping(voltChnnls) # map voltage channels onto the IBM4 digital outputs
 
         lower = 0.0
         upper = 5.0
@@ -315,7 +361,12 @@ def Board_Operation(brdName, pwmPins = ["D9", "D10", "D11", "D12"], includeIBM4r
                     Assign_Volt_Vals(calData, pwmPins, voltVals, the_dev)
 
                     # Read the assigned values using the IBM4 itself, only possible for 'Four_Channel_PCB'
-                    Perform_IBM4_Read(pwmPins, the_dev)
+                    if includeIBM4read: Perform_IBM4_Read(pwmPins, the_dev)
+
+                    # Read the output values using the NI-DAQ
+                    if includeNIDAQread: 
+                        physical_channel_str = 'Dev2/ai0:3', device_name = 'Dev2'
+                        NI_DAQ_Lib.AI_DC_Read(physical_channel_str, device_name, loud = True)
 
             except KeyboardInterrupt:
                     # Ordinarily, you can ignore any errors associated with KeyboardInterrupt, use pass to ignore them
