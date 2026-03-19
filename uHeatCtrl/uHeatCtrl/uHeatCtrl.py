@@ -24,12 +24,18 @@ if __name__ == '__main__':
 
     print(pwd)
 
-    board_name = 'Eight_Channel_PCB'
-    MCVS_Lib.Multi_Channel_Calibration(board_name, ["V5", "V6", "V7", "V8"])
+    #board_name = 'Eight_Channel_PCB'
+    #pinOuts = ["V5", "V6", "V7", "V8"]
+    #MCVS_Lib.Multi_Channel_Calibration(board_name, pinOuts)
 
     #MCVS_Lib.Get_Volt_Vals(4, 0, 5, True)
 
-    #MCVS_Lib.Board_Operation('Four_Channel_PCB', ["V1", "V2", "V3", "V4"], False, True, True)
+    board_name = 'Eight_Channel_PCB'
+    pinOuts = ["V5", "V6", "V7", "V8"]
+    IBM4Read = False
+    NIDAQRead = True
+    Loud = False
+    MCVS_Lib.Board_Operation(board_name, pinOuts, IBM4Read, NIDAQRead, Loud)
 
     #calData = MCVS_Lib.Get_Cal_Curve_Data('Sample')
 
