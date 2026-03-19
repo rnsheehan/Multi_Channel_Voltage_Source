@@ -61,7 +61,7 @@ def Pin_Mapping(brdName = 'Four_Channel_PCB', voltChnnls = ['V1', 'V2', 'V3', 'V
         print(ERR_STATEMENT)
         print(e)
 
-def Multi_Channel_Calibration(voltChnnls = ['V1', 'V2', 'V3', 'V4']):
+def Multi_Channel_Calibration(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4']):
     """
     Calibration routine for multiple-channels of the Micro-Controller Voltage Source
     Calibration is performed using NI-DAQ, which limits the number of channels that can be calibrated at any one time to 4
@@ -92,7 +92,7 @@ def Multi_Channel_Calibration(voltChnnls = ['V1', 'V2', 'V3', 'V4']):
     try:
          # instantiate an object that interfaces with the IBM4
         the_dev = IBM4_Lib.Ser_Iface() # this version should find the first connected IBM4
-        pwmPins = Pin_Mapping(voltChnnls) # map voltage channels onto the IBM4 digital outputs
+        pwmPins = Pin_Mapping(brdName, voltChnnls) # map voltage channels onto the IBM4 digital outputs
 
         c1 = the_dev.CommsStatus()
         c2 = len(pwmPins) > 0 and len(pwmPins) < 5
@@ -100,7 +100,8 @@ def Multi_Channel_Calibration(voltChnnls = ['V1', 'V2', 'V3', 'V4']):
 
         if c10:
             # Board Name
-            board_name = 'Four_Channel_PCB'
+            #board_name = 'Four_Channel_PCB'
+            #board_name = 'Eight_Channel_PCB'
 
             # Name of the NI-DAQ
             device_name = 'Dev1'
@@ -117,7 +118,7 @@ def Multi_Channel_Calibration(voltChnnls = ['V1', 'V2', 'V3', 'V4']):
             # Loop over the pwmPins list
             for p in range(0, len(pwmPins), 1):
                 physical_channel_str = '%(v1)s/ai%(v2)d'%{"v1":device_name, "v2":p}
-                Calibrate_Single_Channel(board_name, pwmPins[p], the_interval, the_dev, physical_channel_str, device_name)
+                Calibrate_Single_Channel(brdName, pwmPins[p], the_interval, the_dev, physical_channel_str, device_name)
 
             MOVE_FILES = False
             if MOVE_FILES:
@@ -185,8 +186,7 @@ def Calibrate_Single_Channel(brdName, pwmChnnl, swpIntrvl:Sweep_Interval.SweepSp
             ai_task = nidaqmx.Task()        
 
             # If ai_chn_str is not correctly defined an exception will be thrown by nidaqmx
-            ai_task.ai_channels.add_ai_voltage_chan(ai_chn_str, terminal_config = nidaqmx.constants.TerminalConfiguration.DIFF, 
-                                                    min_val = -10, max_val = +10)
+            ai_task.ai_channels.add_ai_voltage_chan(ai_chn_str, terminal_config = nidaqmx.constants.TerminalConfiguration.DIFF, min_val = -10, max_val = +10)
             
             # Configure the sampling timing
             # Note that when reading data later no. samples to be read must equal samps_per_chan as defined
@@ -205,7 +205,7 @@ def Calibrate_Single_Channel(brdName, pwmChnnl, swpIntrvl:Sweep_Interval.SweepSp
 
                 uCtrlObj.WriteAnyPWM(pwmChnnl, pwmVal)
                 
-                time.sleep(2) # Give the output time to settle
+                time.sleep(3) # Give the output time to settle, this is quite necessary
 
                 # read the available data
                 data = ai_task.read(nidaqmx.constants.READ_ALL_AVAILABLE)
