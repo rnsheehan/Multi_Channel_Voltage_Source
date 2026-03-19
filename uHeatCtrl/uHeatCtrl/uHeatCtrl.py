@@ -28,7 +28,7 @@ if __name__ == '__main__':
 
     #MCVS_Lib.Get_Volt_Vals(4, 0, 5, True)
 
-    MCVS_Lib.Board_Operation('Four_Channel_PCB', ["V1", "V4"], True)
+    MCVS_Lib.Board_Operation('Four_Channel_PCB', ["V1", "V2", "V3", "V4"], False, True, True)
 
     #calData = MCVS_Lib.Get_Cal_Curve_Data('Sample')
 

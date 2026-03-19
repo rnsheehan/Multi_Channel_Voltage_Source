@@ -335,7 +335,7 @@ def Board_Operation(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], includeIBM4r
          # instantiate an object that interfaces with the IBM4
         the_dev = IBM4_Lib.Ser_Iface() # this version should find the first connected IBM4
 
-        pwmPins = Pin_Mapping(voltChnnls) # map voltage channels onto the IBM4 digital outputs
+        pwmPins = Pin_Mapping(brdName, voltChnnls) # map voltage channels onto the IBM4 digital outputs
 
         lower = 0.0
         upper = 5.0
@@ -365,8 +365,13 @@ def Board_Operation(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], includeIBM4r
 
                     # Read the output values using the NI-DAQ
                     if includeNIDAQread: 
-                        physical_channel_str = 'Dev2/ai0:3', device_name = 'Dev2'
-                        NI_DAQ_Lib.AI_DC_Read(physical_channel_str, device_name, loud = True)
+                        physical_channel_str = 'Dev1/ai0:3'
+                        device_name = 'Dev1'
+                        measVals = NI_DAQ_Lib.AI_DC_Read(physical_channel_str, device_name, loud = True)
+
+                        for i in range(0, len(measVals), 1):
+                            deltaV = voltVals[i] - measVals[i]
+                            print("Delta V = %(v1)0.1f ( mV )"%{"v1":1000.0*deltaV})
 
             except KeyboardInterrupt:
                     # Ordinarily, you can ignore any errors associated with KeyboardInterrupt, use pass to ignore them
@@ -537,17 +542,12 @@ def Assign_Volt_Vals(calDF, pwmPins, voltVals, uCtrlObj:IBM4_Lib.Ser_Iface):
 
         if c10:
             # Assign the voltage value to the pins
+            deltaV = 0.0 # offset that needs to be applied to make PWM output match user input
             for i in range(0, len(pwmPins), 1):
                 # compute the PWM percentage value from the calibration curve data
-                pcVal = Get_PWM_From_Cal_Data(calDF, pwmPins[i], voltVals[i])
+                pcVal = Get_PWM_From_Cal_Data(calDF, pwmPins[i], voltVals[i]-deltaV)
                 uCtrlObj.WriteAnyPWM(pwmPins[i], pcVal)
-            # time.sleep(1)
-            # reads = uCtrlObj.ReadAverageVoltageAllChnnl()
-            # print(2.0*reads)
-            #uCtrlObj.WritePWM(pcVal)
-            # diff_read = uCtrlObj.DiffReadAverage('A4', 'D2', 11)
-            # diff_read *= 2.0
-            # print(diff_read)
+                time.sleep(3) # Induce a known delay between voltage value changes
         else:
             if not c1: ERR_STATEMENT += "\ncalDF is empty, calculation cannot proceed"
             if not c2: ERR_STATEMENT += "\npwmPins is not defined"
@@ -577,21 +577,16 @@ def Perform_IBM4_Read(pwmPins, uCtrlObj:IBM4_Lib.Ser_Iface):
 
         if c10:
             time.sleep(1)
-            diff_read = uCtrlObj.DiffReadAverage('A5', 'D2', 11)
-            diff_read *= 2.0
-            print(diff_read)
-
-            diff_read = uCtrlObj.DiffReadAverage('A2', 'D2', 11)
-            diff_read *= 2.0
-            print(diff_read)
             
-            # readA5 = uCtrlObj.ReadSingleVoltage('A5')
-            # readD2 = uCtrlObj.ReadSingleVoltage('D2')
-            # print('Voltage output = ',readA5,",",readD2,",",readA5 - readD2)
-
-            # readings = uCtrlObj.ReadAverageVoltageAllChnnl()
-            # print(2.0*readings)
-
+            print("IBM4 Readings")
+            readings = uCtrlObj.ReadAverageVoltageAllChnnl()
+            #print(readings[::-1]) # print the array in reverse order
+            for i in range(0, len(readings)-1, 1):
+                readings[i] = 2.0*readings[i] - readings[-1]
+            for i in range(0, len(readings)-1, 1):
+                print("V%(v1)d = %(v2)0.2f ( V )"%{"v1":i+1, "v2":readings[::-1][i+1]})
+            print()
+            
         else:
             if not c2: ERR_STATEMENT += "\npwmPins is not defined"
             if not c4: ERR_STATEMENT += "\nuCtrlObj object is not defined"

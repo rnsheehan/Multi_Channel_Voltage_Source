@@ -723,6 +723,9 @@ def AI_DC_Read(physical_channel_str = 'Dev2/ai0:3', device_name = 'Dev2', loud =
 
     differential read is assumed on all channels
 
+    Output
+    avg_arr (type: numpy array) contains average measured value across all channels
+
     R. Sheehan 18 - 3 - 2026
     """
 
@@ -746,8 +749,7 @@ def AI_DC_Read(physical_channel_str = 'Dev2/ai0:3', device_name = 'Dev2', loud =
             ai_task = nidaqmx.Task()        
 
             # If ai_chn_str is not correctly defined an exception will be thrown by nidaqmx
-            ai_task.ai_channels.add_ai_voltage_chan(ai_chn_str, terminal_config = nidaqmx.constants.TerminalConfiguration.DIFF, 
-                                                    min_val = -10, max_val = +10)
+            ai_task.ai_channels.add_ai_voltage_chan(ai_chn_str, terminal_config = nidaqmx.constants.TerminalConfiguration.DIFF, min_val = 0.0, max_val = 6.0)
             
             # Configure the sampling timing
             # Note that when reading data later no. samples to be read must equal samps_per_chan as defined
@@ -766,12 +768,16 @@ def AI_DC_Read(physical_channel_str = 'Dev2/ai0:3', device_name = 'Dev2', loud =
                 stdev = numpy.std(data[i], ddof = 1)
                 avg_arr[i] = avg
                 stdev_arr[i] = stdev
-                out_str = "ai%(v1)d: %(v2)0.4f +/- %(v3)0.4f ( V )"%{"v1":i, "v2":avg, "v3":stdev}
+                #out_str = "ai%(v1)d: %(v2)0.4f +/- %(v3)0.4f ( V )"%{"v1":i, "v2":avg, "v3":stdev}
+                out_str = "ai%(v1)d: %(v2)0.2f +/- %(v3)0.2f ( V )"%{"v1":i, "v2":avg, "v3":stdev}
                 if loud: print(out_str)
+            if loud:print()
 
             # AI Channel Monitoring Measurement END
             # Close off the ai_task
             ai_task.close()
+
+            return avg_arr
         else:
             if c1 is False: ERR_STATEMENT += '\nNo data contained in physical_channel_str'
             if c2 is False: ERR_STATEMENT += '\nNo data contained in device_name'
