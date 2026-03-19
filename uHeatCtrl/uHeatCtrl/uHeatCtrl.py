@@ -24,24 +24,17 @@ if __name__ == '__main__':
 
     print(pwd)
 
-    #board_name = 'Eight_Channel_PCB'
-    #pinOuts = ["V5", "V6", "V7", "V8"]
-    #MCVS_Lib.Multi_Channel_Calibration(board_name, pinOuts)
+    CALIBRATE_BOARD = True
+    if CALIBRATE_BOARD:
+        board_name = 'Eight_Channel_PCB'
+        pinOuts = ["V5", "V6", "V7", "V8"]
+        MCVS_Lib.Multi_Channel_Calibration(board_name, pinOuts)
 
-    #MCVS_Lib.Get_Volt_Vals(4, 0, 5, True)
-
-    board_name = 'Eight_Channel_PCB'
-    pinOuts = ["V5", "V6", "V7", "V8"]
-    IBM4Read = False
-    NIDAQRead = True
-    Loud = False
-    MCVS_Lib.Board_Operation(board_name, pinOuts, IBM4Read, NIDAQRead, Loud)
-
-    #calData = MCVS_Lib.Get_Cal_Curve_Data('Sample')
-
-    #MCVS_Lib.Get_PWM_From_Cal_Data(calData, "D9", 2.5)
-
-    # print(MCVS_Lib.Pin_Mapping('Four_Channel_PCB', ['V4','V1','V3']))
-    # print(MCVS_Lib.Pin_Mapping('Four_Channel_PCB', ['V2','V4']))
-    # print(MCVS_Lib.Pin_Mapping('Four_Channel_PCB', ['V9']))
-    #print(MCVS_Lib.Pin_Mapping('Four_Channel_PCB', ['V2', 'V2', 'V0', 'V2']))
+    OPERATE_BOARD = False
+    if OPERATE_BOARD:
+        board_name = 'Eight_Channel_PCB'
+        pinOuts = ["V5", "V6", "V7", "V8"]
+        IBM4Read = False
+        NIDAQRead = True
+        Loud = False
+        MCVS_Lib.Board_Operation(board_name, pinOuts, IBM4Read, NIDAQRead, Loud)
