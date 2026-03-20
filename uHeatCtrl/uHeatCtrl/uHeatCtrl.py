@@ -30,7 +30,7 @@ if __name__ == '__main__':
         pinOuts = ["V5", "V6", "V7", "V8"]
         MCVS_Lib.Multi_Channel_Calibration(board_name, pinOuts)
 
-    OPERATE_BOARD = True
+    OPERATE_BOARD = False
     if OPERATE_BOARD:
         board_name = 'Four_Channel_PCB'
         pinOuts = ["V1", "V2", "V3", "V4"]
@@ -38,3 +38,12 @@ if __name__ == '__main__':
         NIDAQRead = True
         Loud = False
         MCVS_Lib.Board_Operation(board_name, pinOuts, IBM4Read, NIDAQRead, Loud)
+
+    LONG_MEAS = True
+    if LONG_MEAS:
+        board_name = 'Four_Channel_PCB'
+        pinOuts = ["V1", "V2", "V3", "V4"]
+        Time = 45 # total time for meas in minutes
+        Nmeas = 101 # total no. measurements
+        Loud = False
+        MCVS_Lib.Long_Measurement(board_name, pinOuts, Time, Nmeas, Loud)

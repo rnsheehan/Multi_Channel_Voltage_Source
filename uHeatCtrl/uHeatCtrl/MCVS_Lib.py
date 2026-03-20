@@ -332,7 +332,7 @@ def Board_Operation(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], includeIBM4r
     ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
 
     try:
-         # instantiate an object that interfaces with the IBM4
+        # instantiate an object that interfaces with the IBM4
         the_dev = IBM4_Lib.Ser_Iface() # this version should find the first connected IBM4
 
         pwmPins = Pin_Mapping(brdName, voltChnnls) # map voltage channels onto the IBM4 digital outputs
@@ -590,6 +590,60 @@ def Perform_IBM4_Read(pwmPins, uCtrlObj:IBM4_Lib.Ser_Iface):
         else:
             if not c2: ERR_STATEMENT += "\npwmPins is not defined"
             if not c4: ERR_STATEMENT += "\nuCtrlObj object is not defined"
+            raise Exception
+    except Exception as e:
+        print(ERR_STATEMENT)
+        print(e)
+
+def Long_Measurement(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], totalTime = 10, noMeas = 11, loud = False):
+    """
+    Perform a long time measurement of the PCB output using NI-DAQ
+
+    Inputs
+    voltChnnls
+    totalTime (type: float) duration for which NI-DAQ was sampling, units of minutes
+    noMeas (type: int) number of measurement taken during period total_time
+
+    R. Sheehan 20 - 3 - 2026
+    """
+
+    FUNC_NAME = ".Board_Operation()" # use this in exception handling messages
+    ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
+
+    try:
+        # instantiate an object that interfaces with the IBM4
+        the_dev = IBM4_Lib.Ser_Iface() # this version should find the first connected IBM4
+
+        pwmPins = Pin_Mapping(brdName, voltChnnls) # map voltage channels onto the IBM4 digital outputs
+
+        lower = 0.0
+        upper = 5.0
+        noPins = len(pwmPins) # record the no. pins required
+
+        c1 = the_dev.CommsStatus()
+        c2 = noPins > 0 and noPins < 9
+        c10 = c1 and c2
+
+        if c10:
+            the_dev.ZeroIBM4()
+
+            # Read the calibration curve data for PCB brdName
+            calData = Get_Cal_Curve_Data(brdName)
+
+            # Create an array for holding the voltage values
+            randomVals = True
+            voltVals = Get_Volt_Vals(noPins, lower, upper, randomVals)
+
+            # Write the voltage values to the PCB
+            Assign_Volt_Vals(calData, pwmPins, voltVals, the_dev)
+
+            # Use the NI-DAQ to perform long-time measurement across 4 channels
+            physical_channel_str = 'Dev1/ai0:3'
+            device_name = 'Dev1'
+            NI_DAQ_Lib.AI_Timed_DC_Measurement(physical_channel_str, device_name, totalTime, noMeas)
+        else:
+            if not c1: ERR_STATEMENT += "\nCould not instantiate IBM4 object"
+            if not c2: ERR_STATEMENT += "\nNo. pwm pins is outside range [1, 8]"
             raise Exception
     except Exception as e:
         print(ERR_STATEMENT)

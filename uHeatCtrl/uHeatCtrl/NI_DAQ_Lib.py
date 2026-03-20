@@ -845,6 +845,9 @@ def AI_Timed_DC_Measurement(physical_channel_str = 'Dev2/ai0:3', device_name = '
 
     differential read is assumed on all channels
 
+    total_time (type: float) duration for which NI-DAQ was sampling, units of minutes
+    no_meas (type: int) number of measurement taken during period total_time
+
     R. Sheehan 27 - 1 - 2026
     """
 
@@ -949,11 +952,11 @@ def AI_Timed_DC_Measurement(physical_channel_str = 'Dev2/ai0:3', device_name = '
             # Close off the ai_task
             ai_task.close()
 
-            filename_avg = "AI_DC_Meas_Avg_%(v1)s_Tmeas_%(v2)d_Nmeas_%(v3)d_Cin_100.txt"%{"v1":ai_chn_str.replace('/','_').replace(':',''), "v2":total_time, "v3":no_meas}
+            filename_avg = "AI_DC_Meas_Avg_%(v1)s_Tmeas_%(v2)d_Nmeas_%(v3)d.txt"%{"v1":ai_chn_str.replace('/','_').replace(':',''), "v2":total_time, "v3":no_meas}
 
-            filename_stdev = "AI_DC_Meas_Stdev_%(v1)s_Tmeas_%(v2)d_Nmeas_%(v3)d_Cin_100.txt"%{"v1":ai_chn_str.replace('/','_').replace(':',''), "v2":total_time, "v3":no_meas}
+            filename_stdev = "AI_DC_Meas_Stdev_%(v1)s_Tmeas_%(v2)d_Nmeas_%(v3)d.txt"%{"v1":ai_chn_str.replace('/','_').replace(':',''), "v2":total_time, "v3":no_meas}
 
-            filename_stat = "AI_DC_Meas_%(v1)s_Tmeas_%(v2)d_Nmeas_%(v3)d_Cin_100_Statistics.txt"%{"v1":ai_chn_str.replace('/','_').replace(':',''), "v2":total_time, "v3":no_meas}
+            filename_stat = "AI_DC_Meas_%(v1)s_Tmeas_%(v2)d_Nmeas_%(v3)d_Statistics.txt"%{"v1":ai_chn_str.replace('/','_').replace(':',''), "v2":total_time, "v3":no_meas}
 
             SAVE_DATA = True
             if SAVE_DATA:
@@ -969,12 +972,12 @@ def AI_Timed_DC_Measurement(physical_channel_str = 'Dev2/ai0:3', device_name = '
                 # Plot the time series of the measured data
                 # Plot the histogram of the measured data
 
-                Analyse_Timed_DC_Measurement(physical_channel_str, device_name, total_time, no_meas, filename_avg, avg_arr)
+                Analyse_Timed_DC_Measurement(physical_channel_str, device_name, total_time, no_meas, filename_avg, avg_arr, loud)
             
             # forcefully remove the arrays from memory
             del avg_arr; del stdev_arr; del counts_arr; 
 
-            MOVE_FILES = True
+            MOVE_FILES = False
             if MOVE_FILES:
                 # This can be optional
                 # Move the files to a more convenient location
@@ -1084,7 +1087,7 @@ def Save_Timed_DC_Measurement_Data(physical_channel_str = 'Dev2/ai0:3', device_n
         print(ERR_STATEMENT)
         print(e)
 
-def Analyse_Timed_DC_Measurement(physical_channel_str = 'Dev2/ai0:3', device_name = 'Dev2', total_time = -1, no_meas = 2, filename_avg = '', avg_arr = numpy.array([])):
+def Analyse_Timed_DC_Measurement(physical_channel_str = 'Dev2/ai0:3', device_name = 'Dev2', total_time = -1, no_meas = 2, filename_avg = '', avg_arr = numpy.array([]), loud = False):
     """
     Analyse the data produced by a timed DC measurement
     Process the data, make plots and reports etc
@@ -1142,19 +1145,19 @@ def Analyse_Timed_DC_Measurement(physical_channel_str = 'Dev2/ai0:3', device_nam
                     model = scipy.stats.linregress(times, avg_arr[:,i])
 
                     print("ai%(v1)d: %(v2)0.4f +/- %(v3)0.4f (V), m = %(v4)0.2f ( mV / hour ), c = %(v5)0.4f ( V ), R^{2} = %(v6)0.2f"%{"v1":i, "v2":savg,"v3":sstdev,"v4":6.0e+4*model.slope,"v5":model.intercept,"v6":model.rvalue**2})
-                    # In all cases there is a time-dependence on the order of less than 1 mV / hours
-                    alpha = 0.05
-                    if model.pvalue < alpha:
-                        print("Reject H_{0}: model slope is significantly different from m = 0\nThere is a time dependence in the model")
-                    else:
-                        print("Accept H_{0}: model slope is not significantly different from m = 0\nThere is no time dependence in the model")
+                    # # In all cases there is a time-dependence on the order of less than 1 mV / hours
+                    # alpha = 0.05
+                    # if model.pvalue < alpha:
+                    #     print("Reject H_{0}: model slope is significantly different from m = 0\nThere is a time dependence in the model")
+                    # else:
+                    #     print("Accept H_{0}: model slope is not significantly different from m = 0\nThere is no time dependence in the model")
 
                 PLOT_TIME_SER = True
                 if PLOT_TIME_SER:
                     # Make a time-series plot of the averaged data
                     args = Plotting.plot_arg_multiple()
 
-                    args.loud = True
+                    args.loud = loud
                     args.crv_lab_list = ["ai%(v1)d"%{"v1":c} for c in range(0, ai_no_ch, 1)]
                     args.mrk_list = [Plotting.labs_lins[i] for i in range(0, ai_no_ch, 1)]
                     args.x_label = 'Time ( mins )'
@@ -1180,7 +1183,7 @@ def Analyse_Timed_DC_Measurement(physical_channel_str = 'Dev2/ai0:3', device_nam
 
                     args = Plotting.plot_arg_multiple()
 
-                    args.loud = True
+                    args.loud = loud
                     args.bins = n_bins
                     #args.plt_range = [-3, 3, 0, 25]
                     args.crv_lab_list = ["ai%(v1)d"%{"v1":c} for c in range(0, ai_no_ch, 1)]
