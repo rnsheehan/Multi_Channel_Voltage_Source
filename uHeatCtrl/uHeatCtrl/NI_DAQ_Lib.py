@@ -768,8 +768,7 @@ def AI_DC_Read(physical_channel_str = 'Dev2/ai0:3', device_name = 'Dev2', loud =
                 stdev = numpy.std(data[i], ddof = 1)
                 avg_arr[i] = avg
                 stdev_arr[i] = stdev
-                #out_str = "ai%(v1)d: %(v2)0.4f +/- %(v3)0.4f ( V )"%{"v1":i, "v2":avg, "v3":stdev}
-                out_str = "ai%(v1)d: %(v2)0.2f +/- %(v3)0.2f ( V )"%{"v1":i, "v2":avg, "v3":stdev}
+                out_str = "ai%(v1)d: %(v2)0.3f +/- %(v3)0.3f ( V )"%{"v1":i, "v2":avg, "v3":stdev}
                 if loud: print(out_str)
             if loud:print()
 
