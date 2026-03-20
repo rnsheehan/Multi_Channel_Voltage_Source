@@ -39,7 +39,7 @@ if __name__ == '__main__':
         Loud = False
         MCVS_Lib.Board_Operation(board_name, pinOuts, IBM4Read, NIDAQRead, Loud)
 
-    LONG_MEAS = True
+    LONG_MEAS = False
     if LONG_MEAS:
         board_name = 'Four_Channel_PCB'
         pinOuts = ["V1", "V2", "V3", "V4"]
@@ -47,3 +47,11 @@ if __name__ == '__main__':
         Nmeas = 101 # total no. measurements
         Loud = False
         MCVS_Lib.Long_Measurement(board_name, pinOuts, Time, Nmeas, Loud)
+
+    OFFSET_CALIB = True
+    if LONG_MEAS:
+        board_name = 'Four_Channel_PCB'
+        pinOuts = ["V1", "V2", "V3", "V4"]
+        Time = 45 # total time for meas in minutes
+        Nmeas = 101 # total no. measurements
+        Loud = False
