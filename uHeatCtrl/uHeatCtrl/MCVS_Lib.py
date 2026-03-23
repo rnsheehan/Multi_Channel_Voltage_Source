@@ -675,6 +675,7 @@ def Offset_Calibration(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], noMeas = 
     brdName (type: string) label for whichever board is being tested
     voltChnnls (type: str list) list containing the names of the voltage channels being used as PCB outputs
     noMeas (type: int) number of measurements to be taken
+    zeroBtwnSets (type: boolean) tells the code whether or not to zero outputs between measurements, want to test to see if the zeroing between outputs has an effect on the offset, during normal operations would not expect to zero between outputs
 
     R. Sheehan 23 - 3 - 2026
     """
@@ -713,7 +714,10 @@ def Offset_Calibration(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], noMeas = 
             
             # Create the file for writing
             # open the file for writing, truncating it first
-            filename = '%(v1)s_Offset_Data_NoCh_%(v2)d_NoMeas_%(v3)d.txt'%{"v1":brdName, "v2":noPins, "v3":noMeas}
+            if zeroBtwnSets:
+                filename = '%(v1)s_Offset_Data_NoCh_%(v2)d_NoMeas_%(v3)d_With_Zeroing.txt'%{"v1":brdName, "v2":noPins, "v3":noMeas}
+            else:
+                filename = '%(v1)s_Offset_Data_NoCh_%(v2)d_NoMeas_%(v3)d_No_Zeroing.txt'%{"v1":brdName, "v2":noPins, "v3":noMeas}
             the_file = open(filename,'w') # open the file for writing, truncating it first
             title = 'Meas, '
             for k in range(0, len(voltChnnls), 1):
