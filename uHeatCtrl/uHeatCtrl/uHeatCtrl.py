@@ -49,9 +49,10 @@ if __name__ == '__main__':
         MCVS_Lib.Long_Measurement(board_name, pinOuts, Time, Nmeas, Loud)
 
     OFFSET_CALIB = True
-    if LONG_MEAS:
+    if OFFSET_CALIB:
         board_name = 'Four_Channel_PCB'
         pinOuts = ["V1", "V2", "V3", "V4"]
-        Time = 45 # total time for meas in minutes
-        Nmeas = 101 # total no. measurements
-        Loud = False
+        Nmeas = 1001 # total no. measurements
+        zero_outputs = False
+        Loud = True
+        MCVS_Lib.Offset_Calibration(board_name, pinOuts, Nmeas, zero_outputs, Loud)

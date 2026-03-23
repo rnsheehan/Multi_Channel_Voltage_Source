@@ -30,6 +30,10 @@ def Pin_Mapping(brdName = 'Four_Channel_PCB', voltChnnls = ['V1', 'V2', 'V3', 'V
     Map the voltage channels to the PWM pins on the IBM4 board
     Use dictionary to create a general mapping
 
+    Inputs
+    brdName (type: string) label for whichever board is being tested
+    voltChnnls (type: str list) list containing the names of the voltage channels being used as PCB outputs
+
     R. Sheehan 18 - 3 - 2026
     """
 
@@ -96,7 +100,8 @@ def Multi_Channel_Calibration(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4']):
 
         c1 = the_dev.CommsStatus()
         c2 = len(pwmPins) > 0 and len(pwmPins) < 5
-        c10 = c1 and c2
+        c3 = brdName != ''
+        c10 = c1 and c2 and c3
 
         if c10:
             # Board Name
@@ -137,6 +142,7 @@ def Multi_Channel_Calibration(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4']):
         else:
             if not c1: ERR_STATEMENT += "\nCould not instantiate IBM4 object"
             if not c2: ERR_STATEMENT += "\nNo. pwm pins is outside range [1, 4]"
+            if not c3: ERR_STATEMENT += "\nbrdName:%(v1)s is not recognised"%{"v1":brdName}
             raise Exception
     except Exception as e:
         print(ERR_STATEMENT)
@@ -229,6 +235,7 @@ def Calibrate_Single_Channel(brdName, pwmChnnl, swpIntrvl:Sweep_Interval.SweepSp
             if not c1: ERR_STATEMENT += "\nswpintrvl object is not defined"
             if not c2: ERR_STATEMENT += "\nuCtrlObj object is not defined"
             if not c3: ERR_STATEMENT += "\npwmChnnl is not a defined in PWM_Chnnl"
+            if not c4: ERR_STATEMENT += "\nbrdName:%(v1)s is not recognised"%{"v1":brdName}
             raise Exception
     except Exception as e:
         print(ERR_STATEMENT)
@@ -306,7 +313,9 @@ def Calibrate_Single_Channel_Processing(brdName, pwmChnnl, calData, loud = False
 
             Plotting.plot_single_linear_fit_curve_with_errors(calData[:,0], calData[:,1], calData[:,2], args)
         else:
-            if not c1: ERR_STATEMENT += "\ncalData is empty"
+            if not c3: ERR_STATEMENT += "\ncalData is empty"
+            if not c2: ERR_STATEMENT += "\npwmChnnl does not exist"
+            if not c1: ERR_STATEMENT += "\nbrdName:%(v1)s is not recognised"%{"v1":brdName}
             raise Exception
     except Exception as e:
         print(ERR_STATEMENT)
@@ -319,7 +328,7 @@ def Board_Operation(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], includeIBM4r
 
     Inputs
     brdName (type: string) label for whichever board is being tested
-    pwmPins (type: str list) list containing the names of the PWM pins being calibrated
+    voltChnnls (type: str list) list containing the names of the voltage channels being used as PCB outputs
 
     R. Sheehan 13 - 3 - 2026
     """
@@ -343,7 +352,8 @@ def Board_Operation(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], includeIBM4r
 
         c1 = the_dev.CommsStatus()
         c2 = noPins > 0 and noPins < 9
-        c10 = c1 and c2
+        c3 = brdName != ''
+        c10 = c1 and c2 and c3
 
         if c10:
             the_dev.ZeroIBM4()
@@ -355,7 +365,9 @@ def Board_Operation(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], includeIBM4r
                 while True:
                     input("\nPress Enter to proceed with voltage selection. \nPress Ctrl+C to stop.\n")
                     # Create an array for holding the voltage values
-                    voltVals = Get_Volt_Vals(noPins, lower, upper, True)
+                    randomVals = True
+                    Loud = True
+                    voltVals = Get_Volt_Vals(noPins, lower, upper, randomVals, Loud)
 
                     # Write the voltage values to the PCB
                     Assign_Volt_Vals(calData, pwmPins, voltVals, the_dev)
@@ -380,12 +392,13 @@ def Board_Operation(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], includeIBM4r
         else:
             if not c1: ERR_STATEMENT += "\nCould not instantiate IBM4 object"
             if not c2: ERR_STATEMENT += "\nNo. pwm pins is outside range [1, 8]"
+            if not c3: ERR_STATEMENT += "\nbrdName:%(v1)s is not recognised"%{"v1":brdName}
             raise Exception
     except Exception as e:
         print(ERR_STATEMENT)
         print(e)
 
-def Get_Volt_Vals(noVals, limLow = 0.0, limHigh = 5.0, randomVals = False):
+def Get_Volt_Vals(noVals, limLow = 0.0, limHigh = 5.0, randomVals = False, loud = False):
     """
     Method for populating a numpy array using keyboard input
     Values entered will be forced between limits limLow <= X <= limHigh
@@ -412,11 +425,11 @@ def Get_Volt_Vals(noVals, limLow = 0.0, limHigh = 5.0, randomVals = False):
                     voltVals[i] = min( max(limLow, value), limHigh)
             else:
                 # randomly assign values to voltVals
-                print("Generating %(v1)d random voltage values in the range [ %(v2)0.1f, %(v3)0.1f ]"%{"v1":noVals, "v2":limLow, "v3":limHigh})
+                if loud: print("Generating %(v1)d random voltage values in the range [ %(v2)0.1f, %(v3)0.1f ]"%{"v1":noVals, "v2":limLow, "v3":limHigh})
                 random.seed() # seed the rng with the current system time
                 for i in range(0, noVals, 1):
                     voltVals[i] = limLow + (limHigh - limLow) * random.random() # generate random number in range [limLow, limHigh] using formula a + (b - a) * random()
-            print("Voltage set values:",voltVals)
+            if loud: print("Voltage set values:",voltVals)
 
             return voltVals
         else:
@@ -542,10 +555,9 @@ def Assign_Volt_Vals(calDF, pwmPins, voltVals, uCtrlObj:IBM4_Lib.Ser_Iface):
 
         if c10:
             # Assign the voltage value to the pins
-            deltaV = 0.0 # offset that needs to be applied to make PWM output match user input
             for i in range(0, len(pwmPins), 1):
                 # compute the PWM percentage value from the calibration curve data
-                pcVal = Get_PWM_From_Cal_Data(calDF, pwmPins[i], voltVals[i]-deltaV)
+                pcVal = Get_PWM_From_Cal_Data(calDF, pwmPins[i], voltVals[i])
                 uCtrlObj.WriteAnyPWM(pwmPins[i], pcVal)
                 time.sleep(3) # Induce a known delay between voltage value changes
         else:
@@ -600,7 +612,8 @@ def Long_Measurement(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], totalTime =
     Perform a long time measurement of the PCB output using NI-DAQ
 
     Inputs
-    voltChnnls
+    brdName (type: string) label for whichever board is being tested
+    voltChnnls (type: str list) list containing the names of the voltage channels being used as PCB outputs
     totalTime (type: float) duration for which NI-DAQ was sampling, units of minutes
     noMeas (type: int) number of measurement taken during period total_time
 
@@ -622,9 +635,11 @@ def Long_Measurement(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], totalTime =
 
         c1 = the_dev.CommsStatus()
         c2 = noPins > 0 and noPins < 9
-        c10 = c1 and c2
+        c3 = brdName != ''
+        c10 = c1 and c2 and c3
 
         if c10:
+            # Ground the IBM4 outputs
             the_dev.ZeroIBM4()
 
             # Read the calibration curve data for PCB brdName
@@ -644,6 +659,113 @@ def Long_Measurement(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], totalTime =
         else:
             if not c1: ERR_STATEMENT += "\nCould not instantiate IBM4 object"
             if not c2: ERR_STATEMENT += "\nNo. pwm pins is outside range [1, 8]"
+            if not c3: ERR_STATEMENT += "\nbrdName:%(v1)s is not recognised"%{"v1":brdName}
+            raise Exception
+    except Exception as e:
+        print(ERR_STATEMENT)
+        print(e)
+
+def Offset_Calibration(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], noMeas = 11, zeroBtwnSets = False, loud = False):
+    """
+    Measure the difference between set-voltage and output voltage from the PCB
+    Gather data on the distribution of the offset value
+    Is it possible to reduce the offset if you know its distribution? 
+
+    Inputs:
+    brdName (type: string) label for whichever board is being tested
+    voltChnnls (type: str list) list containing the names of the voltage channels being used as PCB outputs
+    noMeas (type: int) number of measurements to be taken
+
+    R. Sheehan 23 - 3 - 2026
+    """
+    
+    FUNC_NAME = ".Offset_Calibration()" # use this in exception handling messages
+    ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
+
+    try:
+        # instantiate an object that interfaces with the IBM4
+        the_dev = IBM4_Lib.Ser_Iface() # this version should find the first connected IBM4
+
+        pwmPins = Pin_Mapping(brdName, voltChnnls) # map voltage channels onto the IBM4 digital outputs
+
+        lower = 0.0
+        upper = 5.0
+        noPins = len(pwmPins) # record the no. pins required
+
+        c1 = the_dev.CommsStatus()
+        c2 = noPins > 0 and noPins < 9
+        c3 = brdName != ''
+        c10 = c1 and c2 and c3
+
+        if c10:
+            # Ground the IBM4 outputs
+            the_dev.ZeroIBM4()
+
+            # Read the calibration curve data for PCB brdName
+            calData = Get_Cal_Curve_Data(brdName)
+
+            # Use the NI-DAQ to perform long-time measurement across 4 channels
+            physical_channel_str = 'Dev1/ai0:3'
+            device_name = 'Dev1'
+
+            # Time the measurement and the file IO
+            start = time.time()
+            
+            # Create the file for writing
+            # open the file for writing, truncating it first
+            filename = '%(v1)s_Offset_Data_NoCh_%(v2)d_NoMeas_%(v3)d.txt'%{"v1":brdName, "v2":noPins, "v3":noMeas}
+            the_file = open(filename,'w') # open the file for writing, truncating it first
+            title = 'Meas, '
+            for k in range(0, len(voltChnnls), 1):
+                if k == noPins - 1:
+                    title += '%(v1)s\n'%{"v1":voltChnnls[k]}
+                else:
+                    title += '%(v1)s, '%{"v1":voltChnnls[k]}
+            the_file.write(title)
+            the_file.close()
+            
+            # Perform noMeas voltage output assignments and measurements
+            # Record the data in a file
+            for i in range(0, noMeas, 1):
+                # Create an array for holding the voltage values
+                randomVals = True
+                voltVals = Get_Volt_Vals(noPins, lower, upper, randomVals)
+
+                # Write the voltage values to the PCB
+                Assign_Volt_Vals(calData, pwmPins, voltVals, the_dev)
+
+                readVals = NI_DAQ_Lib.AI_DC_Read(physical_channel_str, device_name)
+
+                deltaVals = voltVals - readVals # difference between the setValue and the readValue
+
+                # format the data for output to file
+                line = '%(v1)d, '%{"v1":i}
+                for j in range(0, len(deltaVals), 1):
+                    if j == noPins-1:
+                        line += '%(v1)0.9f\n'%{"v1":deltaVals[j]}
+                    else:
+                        line += '%(v1)0.9f, '%{"v1":deltaVals[j]}
+                the_file = open(filename,'a')
+                the_file.write(line)
+                the_file.close()
+
+                if loud: 
+                    if i%50 == 0:
+                        print("Meas:",i,", Output Offset:",deltaVals)
+
+                if zeroBtwnSets: the_dev.ZeroIBM4()
+
+            end = time.time()
+            deltaT = end - start
+            measT = deltaT / noMeas
+            print("Timing")
+            print("%(v1)d measurements performed in %(v2)0.3f seconds"%{"v1":noMeas, "v2":deltaT})
+            print("%(v1)0.3f secs / measurement"%{"v1":measT})
+
+        else:
+            if not c1: ERR_STATEMENT += "\nCould not instantiate IBM4 object"
+            if not c2: ERR_STATEMENT += "\nNo. pwm pins is outside range [1, 8]"
+            if not c3: ERR_STATEMENT += "\nbrdName:%(v1)s is not recognised"%{"v1":brdName}
             raise Exception
     except Exception as e:
         print(ERR_STATEMENT)

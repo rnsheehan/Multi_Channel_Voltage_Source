@@ -749,7 +749,7 @@ def AI_DC_Read(physical_channel_str = 'Dev2/ai0:3', device_name = 'Dev2', loud =
             ai_task = nidaqmx.Task()        
 
             # If ai_chn_str is not correctly defined an exception will be thrown by nidaqmx
-            ai_task.ai_channels.add_ai_voltage_chan(ai_chn_str, terminal_config = nidaqmx.constants.TerminalConfiguration.DIFF, min_val = 0.0, max_val = 6.0)
+            ai_task.ai_channels.add_ai_voltage_chan(ai_chn_str, terminal_config = nidaqmx.constants.TerminalConfiguration.DIFF, min_val = -10.0, max_val = +10.0)
             
             # Configure the sampling timing
             # Note that when reading data later no. samples to be read must equal samps_per_chan as defined
