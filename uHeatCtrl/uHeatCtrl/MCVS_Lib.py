@@ -774,3 +774,99 @@ def Offset_Calibration(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], noMeas = 
     except Exception as e:
         print(ERR_STATEMENT)
         print(e)
+
+def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], noMeas = 11, loud = False):
+    """
+    Analyse the data obtained from the offset calibration measurement
+
+    R. Sheehan 23 - 3 - 2026
+    """
+
+    FUNC_NAME = ".Offset_Calibration()" # use this in exception handling messages
+    ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
+
+    try:
+        pwmPins = Pin_Mapping(brdName, voltChnnls) # map voltage channels onto the IBM4 digital outputs
+
+        lower = 0.0
+        upper = 5.0
+        deltaT = 13.068 / 60.0 / 60.0 # time interval between measurements in units of hours
+        noPins = len(pwmPins) # record the no. pins required
+
+        c2 = noPins > 0 and noPins < 9
+        c3 = brdName != ''
+        c10 = c2 and c3
+
+        if c10:
+            filename = '%(v1)s_Offset_Data_NoCh_%(v2)d_NoMeas_%(v3)d_No_Zeroing.txt'%{"v1":brdName, "v2":noPins, "v3":noMeas}
+
+            if glob.glob(filename):
+                dF = pandas.read_csv(filename)
+                titles = list(dF)
+
+                # Some statistics
+                print("Statistics")
+                avg_arr = numpy.zeros(noPins)
+                stdev_arr = numpy.zeros(noPins)
+                for i in range(1, len(titles), 1):
+                    avg = 1000.0*dF[titles[i]].mean()
+                    stdev = 1000.0*dF[titles[i]].std()
+                    avg_arr[i-1] = avg
+                    stdev_arr[i-1] = stdev
+                    rng = 1000.0*(dF[titles[i]].max() - dF[titles[i]].min())
+                    kurt = dF[ titles[i] ].kurtosis()
+                    print("%(v1)s: %(v2)0.3f +/- %(v3)0.3f ( mV ), range = %(v4)0.3f ( mV ), K = %(v5)0.3f"%{"v1":titles[i], "v2":avg, "v3":stdev, "v4":rng, "v5":kurt})
+
+                PLOT_TIME_SER = True
+                if PLOT_TIME_SER:
+                    # Make some plots and statistics
+                    args = Plotting.plot_arg_multiple()
+
+                    args.loud = True
+                    args.crv_lab_list = titles[1:len(titles)]
+                    args.mrk_list = [Plotting.labs_lins[i] for i in range(0, len(titles)-1, 1)]
+                    args.x_label = 'Measurement Time ( hours )'
+                    args.y_label = 'Measurement Offset ( mV )'
+                    args.plt_range = [0, 3.7, -20, 55]
+
+                    hv_data = [ [ deltaT * dF[ titles[0] ], 1000.0*dF[ titles[i] ] ] for i in range(1, len(titles), 1) ]
+                    Plotting.plot_multiple_curves(hv_data, args)
+                
+                    del hv_data
+
+                PLOT_HIST = False
+                if PLOT_HIST:
+                    # Use Sturges' Rule to compute the no. of bins required
+                    from math import log
+                    n_bins = int( 1.0 + 3.322*log( len(dF[ titles[0] ]) ) )
+
+                    args = Plotting.plot_arg_multiple()
+
+                    args.loud = True
+                    args.crv_lab_list = titles[1:len(titles)]
+                    args.bins = n_bins
+                    args.cdf = True
+                    #args.plt_range = [-2.5, +2.5, 0, 70]
+                    
+                    # when comparing one distribution against another it is best practice to use unscaled data
+                    hist_data = [1000.0*dF[ titles[i] ] for i in range(1, len(titles), 1) ]
+
+                    # scale the data to zero mean and unity std. dev. 
+                    # hist_data = []
+                    # for i in range(0, noPins, 1):
+                    #      hist_data.append( (1000.0*dF[ titles[i+1] ] - avg_arr[i]) / stdev_arr[i] )
+                    
+                    Plotting.plot_multi_histogram(hist_data, args)
+
+                    del hist_data
+
+            else:
+                ERR_STATEMENT += "\nCannot locate file:"+filename
+                raise Exception
+        else:
+            if not c2: ERR_STATEMENT += "\nNo. pwm pins is outside range [1, 8]"
+            if not c3: ERR_STATEMENT += "\nbrdName:%(v1)s is not recognised"%{"v1":brdName}
+            raise Exception
+    except Exception as e:
+        print(ERR_STATEMENT)
+        print(e)
