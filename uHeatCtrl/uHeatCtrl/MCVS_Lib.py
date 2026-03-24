@@ -12,8 +12,6 @@ import os
 import glob
 import time
 import numpy
-import scipy
-import random
 import Common
 import Plotting
 import Sweep_Interval
@@ -274,7 +272,8 @@ def Calibrate_Single_Channel_Processing(brdName, pwmChnnl, calData, loud = False
             numpy.savetxt(filename, calData, fmt = "%0.9f", delimiter = ',')
 
             # Compute linear fit to the dataset
-            model = scipy.stats.linregress(calData[:,0], calData[:,1])
+            from scipy.stats import linregress
+            model = linregress(calData[:,0], calData[:,1])
 
             # Export the computed cal curves to a file for future reference
             filename = '%(v1)s_Cal_Curves.txt'%{"v1":brdName}
@@ -425,10 +424,12 @@ def Get_Volt_Vals(noVals, limLow = 0.0, limHigh = 5.0, randomVals = False, loud 
                     voltVals[i] = min( max(limLow, value), limHigh)
             else:
                 # randomly assign values to voltVals
+                from random import seed
+                from random import random
                 if loud: print("Generating %(v1)d random voltage values in the range [ %(v2)0.1f, %(v3)0.1f ]"%{"v1":noVals, "v2":limLow, "v3":limHigh})
-                random.seed() # seed the rng with the current system time
+                seed() # seed the rng with the current system time
                 for i in range(0, noVals, 1):
-                    voltVals[i] = limLow + (limHigh - limLow) * random.random() # generate random number in range [limLow, limHigh] using formula a + (b - a) * random()
+                    voltVals[i] = limLow + (limHigh - limLow) * random() # generate random number in range [limLow, limHigh] using formula a + (b - a) * random()
             if loud: print("Voltage set values:",voltVals)
 
             return voltVals
@@ -790,7 +791,7 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
 
         lower = 0.0
         upper = 5.0
-        deltaT = 13.068 / 60.0 / 60.0 # time interval between measurements in units of hours
+        deltaT = ( 0.5 * (13.094 + 13.068) ) / 60.0 / 60.0 # time interval between measurements in units of hours
         noPins = len(pwmPins) # record the no. pins required
 
         c2 = noPins > 0 and noPins < 9
@@ -817,7 +818,34 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
                     kurt = dF[ titles[i] ].kurtosis()
                     print("%(v1)s: %(v2)0.3f +/- %(v3)0.3f ( mV ), range = %(v4)0.3f ( mV ), K = %(v5)0.3f"%{"v1":titles[i], "v2":avg, "v3":stdev, "v4":rng, "v5":kurt})
 
-                PLOT_TIME_SER = True
+                KS_TEST = True
+                if KS_TEST:
+                    # perform Kolmorgorov-Smirnov test to determine if the data have the same distribution
+                    # What happens when 0.01 < p < 0.05
+                    # as it turns out I can reject NH at the 5% level, but I can accept NH at the 1% level
+                    # The evidence against the null hypothesis is weak-to-moderate
+                    # You can reject H0, but only if you’re willing to tolerate a 5% false‑positive rate
+                    # The result is significant at the 5% level, but not significant at the 1% level
+                    # There is some evidence against the null, but not strong evidence
+                    alpha = 0.01
+                    from scipy.stats import kstest
+                    print("Kolmorgorov-Smirnov Test")
+                    print("Null-Hypothesis: Data is distributed according to the same distribution\n")
+                    count = 0
+                    for j in range(1, len(titles), 1):
+                        for i in range(1, len(titles), 1):
+                            if j!=i:
+                                ksresult = kstest(dF[titles[j]], dF[titles[i]])
+                                if ksresult.pvalue < alpha:
+                                    count += 1
+                                    print(titles[j],"vs",titles[i])
+                                    print("Reject the Null-Hypothesis p < %(v1)0.2f"%{"v1":alpha})    
+                                    print("ks_stat = %(v1)0.5f, p = %(v2)0.5f"%{"v1":ksresult.statistic, "v2":ksresult.pvalue})
+                                    print()
+                    if count == 0:
+                        print("The null-hypothesis is accepted at p = 1%")
+
+                PLOT_TIME_SER = False
                 if PLOT_TIME_SER:
                     # Make some plots and statistics
                     args = Plotting.plot_arg_multiple()
@@ -834,7 +862,7 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
                 
                     del hv_data
 
-                PLOT_HIST = False
+                PLOT_HIST = True
                 if PLOT_HIST:
                     # Use Sturges' Rule to compute the no. of bins required
                     from math import log
@@ -845,21 +873,20 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
                     args.loud = True
                     args.crv_lab_list = titles[1:len(titles)]
                     args.bins = n_bins
-                    args.cdf = True
+                    args.cdf = False
                     #args.plt_range = [-2.5, +2.5, 0, 70]
                     
                     # when comparing one distribution against another it is best practice to use unscaled data
-                    hist_data = [1000.0*dF[ titles[i] ] for i in range(1, len(titles), 1) ]
+                    #hist_data = [1000.0*dF[ titles[i] ] for i in range(1, len(titles), 1) ]
 
                     # scale the data to zero mean and unity std. dev. 
-                    # hist_data = []
-                    # for i in range(0, noPins, 1):
-                    #      hist_data.append( (1000.0*dF[ titles[i+1] ] - avg_arr[i]) / stdev_arr[i] )
+                    hist_data = []
+                    for i in range(0, noPins, 1):
+                         hist_data.append( (1000.0*dF[ titles[i+1] ] - avg_arr[i]) / stdev_arr[i] )
                     
                     Plotting.plot_multi_histogram(hist_data, args)
 
                     del hist_data
-
             else:
                 ERR_STATEMENT += "\nCannot locate file:"+filename
                 raise Exception

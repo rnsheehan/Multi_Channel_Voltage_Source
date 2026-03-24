@@ -1193,10 +1193,10 @@ def Analyse_Timed_DC_Measurement(physical_channel_str = 'Dev2/ai0:3', device_nam
 
                     del hist_data
 
-                del hv_data;
+                del hv_data
             else:
-                pass
-
+                ERR_STATEMENT += "\nNot possible to analyse data when ai_no_ch < 1"
+                raise Exception
         else:
             if c1 != True: ERR_STATEMENT += "\ntotal_time value is not correct"
             if c2 != True: ERR_STATEMENT += "\nno_meas value is not correct"
