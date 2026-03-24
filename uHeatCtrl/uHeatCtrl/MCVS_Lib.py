@@ -45,6 +45,8 @@ def Pin_Mapping(brdName = 'Four_Channel_PCB', voltChnnls = ['V1', 'V2', 'V3', 'V
         elif brdName == 'Eight_Channel_PCB':
             mapping = {'V1':'D0', 'V2':'D1', 'V3':'D7', 'V4':'D9', 'V5':'D10', 'V6':'D11', 'V7':'D12', 'V8':'D13'}
             #return [mapping[v] for v in voltChnnls]
+        elif brdName == 'Through_Hole':
+            mapping = {'V1':'D0', 'V2':'D1', 'V3':'D7', 'V4':'D9'}
         else:
             ERR_STATEMENT += '\nBoard: %(v1)s not recognised'%{"v1":brdName}
             raise Exception
@@ -131,11 +133,11 @@ def Multi_Channel_Calibration(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4']):
                 DATA_HOME = 'c:/users/robertsheehan/Research/Electronics/uHeater_Control/'
                 #DATA_HOME = 'D:/Rob/Research/Electronics/uHeater_Control/'
 
-                txt_files = glob.glob("%(v1)s*.txt"%{"v1":board_name})
+                txt_files = glob.glob("%(v1)s*.txt"%{"v1":brdName})
 
                 Common.Move_Files(DATA_HOME, txt_files)
 
-                png_files = glob.glob("%(v1)s*.png"%{"v1":board_name})
+                png_files = glob.glob("%(v1)s*.png"%{"v1":brdName})
                 Common.Move_Files(DATA_HOME, png_files)
         else:
             if not c1: ERR_STATEMENT += "\nCould not instantiate IBM4 object"
