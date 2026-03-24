@@ -926,11 +926,7 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
                     args.bins = n_bins
                     args.cdf = False
                     args.normed = True
-                    args.x_label = 'Measured Offset ( mV )'
-                    if args.cdf:
-                        args.y_label = 'Cumlative Probability Density' if args.normed else 'Cumulative Frequency Count'
-                    else:
-                        args.y_label = 'Probability Density' if args.normed else 'Frequency Count'
+                    args.x_label = r'Measured Offset $\Delta = V_{set} - V_{meas}$ ( mV )'
                     args.curve_label = r'$<\Delta>$ = %(v2)0.1f +/- %(v3)0.1f ( mV )'%{"v2":avg, "v3":stdev}
 
                     Plotting.plot_single_histogram(hist_data, args)
