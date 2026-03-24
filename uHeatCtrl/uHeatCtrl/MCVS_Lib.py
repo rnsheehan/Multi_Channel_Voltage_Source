@@ -820,7 +820,7 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
                     kurt = dF[ titles[i] ].kurtosis()
                     print("%(v1)s: %(v2)0.3f +/- %(v3)0.3f ( mV ), range = %(v4)0.3f ( mV ), K = %(v5)0.3f"%{"v1":titles[i], "v2":avg, "v3":stdev, "v4":rng, "v5":kurt})
 
-                KS_TEST = True
+                KS_TEST = False
                 if KS_TEST:
                     # perform Kolmorgorov-Smirnov test to determine if the data have the same distribution
                     # What happens when 0.01 < p < 0.05
@@ -864,7 +864,7 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
                 
                     del hv_data
 
-                PLOT_HIST = True
+                PLOT_HIST = False
                 if PLOT_HIST:
                     # Use Sturges' Rule to compute the no. of bins required
                     from math import log
@@ -889,6 +889,70 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
                     Plotting.plot_multi_histogram(hist_data, args)
 
                     del hist_data
+
+                COMBINE_STREAMS = True
+                if COMBINE_STREAMS:
+                    # Combine all the offset measurements into a single data set
+                    # Use this to generate a single empirical distribution
+                    # Can you use the empirical distribution to generate random offset values?
+
+                    comb_data = numpy.array([])
+
+                    for i in range(1, len(titles), 1):
+                        comb_data = numpy.append(comb_data, dF[titles[i]])
+
+                    from scipy.stats import kurtosis
+                    from math import log
+                    
+                    # Compute statistics for the combined data set
+                    avg = 1000.0*numpy.mean(comb_data)
+                    stdev = 1000.0*numpy.std(comb_data, ddof = 1)
+                    rng = 1000.0*(numpy.max(comb_data) - numpy.min(comb_data))
+                    kurt = kurtosis(comb_data)
+                    print("Combined Statistics")
+                    print("Offset: %(v2)0.3f +/- %(v3)0.3f ( mV ), range = %(v4)0.3f ( mV ), K = %(v5)0.3f"%{"v2":avg, "v3":stdev, "v4":rng, "v5":kurt})
+
+                    # Make a plot of the data histogram
+                    # Use Sturges' Rule to compute the no. of bins required                    
+                    n_bins = int( 1.0 + 3.322*log( len( comb_data ) ) )
+
+                    # when using empirical data it's best practice not to scale to mean = 0 and sigma = 1
+                    scale_data = False
+                    hist_data = [(1000.0*comb_data[j] - avg) / stdev for j in range(0, len(comb_data), 1) ] if scale_data else 1000.0*comb_data
+
+                    args = Plotting.plot_arg_single()
+
+                    args.loud = True
+                    args.bins = n_bins
+                    args.cdf = False
+                    args.normed = True
+                    args.x_label = 'Measured Offset ( mV )'
+                    if args.cdf:
+                        args.y_label = 'Cumlative Probability Density' if args.normed else 'Cumulative Frequency Count'
+                    else:
+                        args.y_label = 'Probability Density' if args.normed else 'Frequency Count'
+                    args.curve_label = r'$<\Delta>$ = %(v2)0.1f +/- %(v3)0.1f ( mV )'%{"v2":avg, "v3":stdev}
+
+                    Plotting.plot_single_histogram(hist_data, args)
+
+                    # generate a set of random samples from the data
+                    # use the bootstrapping technique because it stays faithful to the original data without assuming any distribution
+                    # draw random values from the dataset itself, with replacement
+                    # https://numpy.org/doc/stable/reference/random/generated/numpy.random.choice.html
+                    n_samples = 1
+                    samples = numpy.random.choice(comb_data, size = n_samples, replace = True)
+                    print(samples)
+
+                    # alternatively use empirical cdf
+                    # generate smooth-ish data without assuming underlying distribution
+                    # use inverse transform sampling
+                    # https://numpy.org/doc/stable/reference/generated/numpy.interp.html
+                    # https://en.wikipedia.org/wiki/Inverse_transform_sampling
+                    n_samples = 100
+                    comb_data = numpy.sort(comb_data) # sort the data
+                    uniform_samples = numpy.random.rand(n_samples) # generate a set of uniformly distributed random values
+                    samples = numpy.interp(uniform_samples, numpy.linspace(0, 1, len(comb_data)), comb_data) # sample the data at those values
+                    print(numpy.mean(samples),",",numpy.std(samples))
             else:
                 ERR_STATEMENT += "\nCannot locate file:"+filename
                 raise Exception
