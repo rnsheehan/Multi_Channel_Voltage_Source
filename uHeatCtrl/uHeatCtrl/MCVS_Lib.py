@@ -864,7 +864,7 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
                 
                     del hv_data
 
-                PLOT_HIST = False
+                PLOT_HIST = True
                 if PLOT_HIST:
                     # Use Sturges' Rule to compute the no. of bins required
                     from math import log
@@ -875,22 +875,24 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
                     args.loud = True
                     args.crv_lab_list = titles[1:len(titles)]
                     args.bins = n_bins
-                    args.cdf = False
-                    #args.plt_range = [-2.5, +2.5, 0, 70]
+                    args.cdf = True
+                    args.normed = False
+                    args.x_label = r'Measured Offset $\Delta = V_{set} - V_{meas}$ ( mV )'
+                    #args.curve_label = r'$<\Delta>$ = %(v2)0.1f +/- %(v3)0.1f ( mV )'%{"v2":avg, "v3":stdev}
                     
                     # when comparing one distribution against another it is best practice to use unscaled data
-                    #hist_data = [1000.0*dF[ titles[i] ] for i in range(1, len(titles), 1) ]
+                    hist_data = [1000.0*dF[ titles[i] ] for i in range(1, len(titles), 1) ]
 
                     # scale the data to zero mean and unity std. dev. 
-                    hist_data = []
-                    for i in range(0, noPins, 1):
-                         hist_data.append( (1000.0*dF[ titles[i+1] ] - avg_arr[i]) / stdev_arr[i] )
+                    # hist_data = []
+                    # for i in range(0, noPins, 1):
+                    #      hist_data.append( (1000.0*dF[ titles[i+1] ] - avg_arr[i]) / stdev_arr[i] )
                     
                     Plotting.plot_multi_histogram(hist_data, args)
 
                     del hist_data
 
-                COMBINE_STREAMS = True
+                COMBINE_STREAMS = False
                 if COMBINE_STREAMS:
                     # Combine all the offset measurements into a single data set
                     # Use this to generate a single empirical distribution
