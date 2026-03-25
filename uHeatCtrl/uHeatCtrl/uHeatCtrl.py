@@ -57,7 +57,7 @@ if __name__ == '__main__':
         Loud = True
         MCVS_Lib.Offset_Calibration(board_name, pinOuts, Nmeas, zero_outputs, Loud)
 
-    OFFSET_CALIB_ANAL = True
+    OFFSET_CALIB_ANAL = False
     if OFFSET_CALIB_ANAL:
         board_name = 'Four_Channel_PCB'
         pinOuts = ["V1", "V2", "V3", "V4"]
@@ -65,3 +65,7 @@ if __name__ == '__main__':
         zero_outputs = True
         Loud = True
         MCVS_Lib.Offset_Calibration_Analysis(board_name, pinOuts, Nmeas, Loud)
+
+    COMPARE_DIST = True
+    if COMPARE_DIST:
+        MCVS_Lib.Compare_Distributions()

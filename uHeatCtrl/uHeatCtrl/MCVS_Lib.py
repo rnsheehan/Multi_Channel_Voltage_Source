@@ -965,3 +965,49 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
     except Exception as e:
         print(ERR_STATEMENT)
         print(e)
+
+def Compare_Distributions():
+    """
+    Compare the different offset distributions
+    Do they have the same distribution? 
+
+    R. Sheehan 25 - 3 - 2026
+    """
+
+    FUNC_NAME = ".Compare_Distributions()" # use this in exception handling messages
+    ERR_STATEMENT = "Error: " + MOD_NAME_STR + FUNC_NAME
+
+    try:
+        from scipy.stats import kurtosis
+        from math import log
+
+        files = ['PCB_Offset_Data_No_Zeroing.txt', 'PCB_Offset_Data_With_Zeroing.txt']
+        the_data = []
+        for f in files:
+            if glob.glob(f):
+                comb_data = numpy.loadtxt(f, delimiter = ',')
+                the_data.append(comb_data)
+                print('Filename:',f)
+                avg = 1000.0*numpy.mean(comb_data)
+                stdev = 1000.0*numpy.std(comb_data, ddof = 1)
+                rng = 1000.0*(numpy.max(comb_data) - numpy.min(comb_data))
+                kurt = kurtosis(comb_data)
+                print("Offset: %(v2)0.3f +/- %(v3)0.3f ( mV ), range = %(v4)0.3f ( mV ), K = %(v5)0.3f"%{"v2":avg, "v3":stdev, "v4":rng, "v5":kurt})
+                print()
+
+        if len(the_data)>1:
+            from scipy.stats import kstest
+            print("Kolmorgorov-Smirnov Test")
+            print("Null-Hypothesis: Data is distributed according to the same distribution")
+            alpha = 0.05
+            ksresult = kstest(the_data[0], the_data[1])
+            if ksresult.pvalue < alpha:
+                count += 1
+                print("Reject the Null-Hypothesis p < %(v1)0.2f"%{"v1":alpha})                    
+            else:
+                print("The null-hypothesis is accepted at p = %(v1)d%%"%{"v1":100*alpha})
+            print("ks_stat = %(v1)0.5f, p = %(v2)0.5f"%{"v1":ksresult.statistic, "v2":ksresult.pvalue})
+            print()
+    except Exception as e:
+        print(ERR_STATEMENT)
+        print(e)
