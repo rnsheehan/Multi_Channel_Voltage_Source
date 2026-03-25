@@ -801,7 +801,7 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
         c10 = c2 and c3
 
         if c10:
-            filename = '%(v1)s_Offset_Data_NoCh_%(v2)d_NoMeas_%(v3)d_No_Zeroing.txt'%{"v1":brdName, "v2":noPins, "v3":noMeas}
+            filename = '%(v1)s_Offset_Data_NoCh_%(v2)d_NoMeas_%(v3)d_With_Zeroing.txt'%{"v1":brdName, "v2":noPins, "v3":noMeas}
 
             if glob.glob(filename):
                 dF = pandas.read_csv(filename)
@@ -902,6 +902,10 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
 
                     for i in range(1, len(titles), 1):
                         comb_data = numpy.append(comb_data, dF[titles[i]])
+
+                    # Write the combined offset distribution data to a file
+                    filename = 'PCB_Offset_Data_With_Zeroing.txt'
+                    numpy.savetxt(filename, comb_data, fmt = "%0.9f", delimiter = ',')
 
                     from scipy.stats import kurtosis
                     from math import log
