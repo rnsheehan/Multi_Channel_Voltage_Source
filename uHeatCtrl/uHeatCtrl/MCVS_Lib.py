@@ -864,7 +864,7 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
                 
                     del hv_data
 
-                PLOT_HIST = True
+                PLOT_HIST = False
                 if PLOT_HIST:
                     # Use Sturges' Rule to compute the no. of bins required
                     from math import log
@@ -892,7 +892,7 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
 
                     del hist_data
 
-                COMBINE_STREAMS = False
+                COMBINE_STREAMS = True
                 if COMBINE_STREAMS:
                     # Combine all the offset measurements into a single data set
                     # Use this to generate a single empirical distribution

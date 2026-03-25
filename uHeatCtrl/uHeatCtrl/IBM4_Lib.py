@@ -519,37 +519,6 @@ class Ser_Iface(object):
             print(e)
 
     # methods for obtaining data from the IBM4
-    def ReadSimple(self):
-        """
-        Implementation of the simple read method
-        Performs a single read across all channels
-        Returns the reading as a string
-
-        R. Sheehan 18 - 3 - 2024
-        """
-        self.FUNC_NAME = ".ReadSimple()" # use this in exception handling messages
-        self.ERR_STATEMENT = "Error: " + self.MOD_NAME_STR + self.FUNC_NAME
-
-        try:
-            c1 = True if self.instr_obj.isOpen() else False # confirm that the instrument object has been instantiated
-            
-            if c1:
-                read_cmd = 'l\r\n' # generate the read command
-                self.instr_obj.write( str.encode(read_cmd) ) # when using serial str must be encoded as bytes                
-                read_result = self.instr_obj.read_until(size=read_cmd.__sizeof__()) # read_result returned as bytes and clear the return message
-                #print(read_result) # this reads the string containing the cmd that was input
-                read_result = self.instr_obj.read_until(b'\n',size=None) # read_result returned as bytes, must be cast to str before being parsed
-                print(read_result)
-                read_result = self.instr_obj.read_until(b'\n',size=None) # read_result returned as bytes, must be cast to str before being parsed
-                print(read_result)
-            else:
-                if not c1:
-                    self.ERR_STATEMENT = self.ERR_STATEMENT + '\nCould not read from instrument\nNo comms established'
-                raise Exception
-        except Exception as e:
-            print(self.ERR_STATEMENT)
-            print(e)
-    
     def ReadVoltage(self, input_channel, read_type = 'Single Voltage', no_reads = 10):
         
         """
