@@ -48,7 +48,7 @@ if __name__ == '__main__':
         Loud = False
         MCVS_Lib.Long_Measurement(board_name, pinOuts, Time, Nmeas, Loud)
 
-    OFFSET_CALIB = False
+    OFFSET_CALIB = True
     if OFFSET_CALIB:
         board_name = 'Through_Hole'
         pinOuts = ["V1", "V2", "V3", "V4"]
