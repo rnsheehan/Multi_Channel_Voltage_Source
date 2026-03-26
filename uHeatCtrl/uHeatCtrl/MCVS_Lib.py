@@ -793,7 +793,7 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
 
         lower = 0.0
         upper = 5.0
-        deltaT = ( 0.5 * (13.094 + 13.068) ) / 60.0 / 60.0 # time interval between measurements in units of hours
+        deltaT = ( (13.094 + 13.068 + 13.064) / 3.0 ) / 60.0 / 60.0 # time interval between measurements in units of hours
         noPins = len(pwmPins) # record the no. pins required
 
         c2 = noPins > 0 and noPins < 9
@@ -801,7 +801,9 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
         c10 = c2 and c3
 
         if c10:
-            filename = '%(v1)s_Offset_Data_NoCh_%(v2)d_NoMeas_%(v3)d_With_Zeroing.txt'%{"v1":brdName, "v2":noPins, "v3":noMeas}
+            zstat = 'No'
+            #zstat = 'With'
+            filename = '%(v1)s_Offset_Data_NoCh_%(v2)d_NoMeas_%(v3)d_%(v4)s_Zeroing.txt'%{"v1":brdName, "v2":noPins, "v3":noMeas, "v4":zstat}
 
             if glob.glob(filename):
                 dF = pandas.read_csv(filename)
@@ -904,7 +906,7 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
                         comb_data = numpy.append(comb_data, dF[titles[i]])
 
                     # Write the combined offset distribution data to a file
-                    filename = 'PCB_Offset_Data_With_Zeroing.txt'
+                    filename = '%(v1)s_Offset_Data_%(v2)s_Zeroing.txt'%{"v1":brdName, "v2":zstat}
                     numpy.savetxt(filename, comb_data, fmt = "%0.9f", delimiter = ',')
 
                     from scipy.stats import kurtosis
@@ -934,6 +936,7 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
                     args.normed = True
                     args.x_label = r'Measured Offset $\Delta = V_{set} - V_{meas}$ ( mV )'
                     args.curve_label = r'$<\Delta>$ = %(v2)0.1f +/- %(v3)0.1f ( mV )'%{"v2":avg, "v3":stdev}
+                    args.fig_name = filename.replace('.txt','')
 
                     Plotting.plot_single_histogram(hist_data, args)
 
@@ -981,8 +984,12 @@ def Compare_Distributions():
         from scipy.stats import kurtosis
         from math import log
 
-        files = ['PCB_Offset_Data_No_Zeroing.txt', 'PCB_Offset_Data_With_Zeroing.txt']
+        files = ['Four_Channel_PCB_Offset_Data_No_Zeroing.txt', 'Four_Channel_PCB_Offset_Data_With_Zeroing.txt']
+        #files = ['Four_Channel_PCB_Offset_Data_No_Zeroing.txt', 'Through_Hole_Offset_Data_No_Zeroing.txt']
         the_data = []
+        labels = []
+        circs = ['PCB No', 'PCB With']
+        count = 0
         for f in files:
             if glob.glob(f):
                 comb_data = numpy.loadtxt(f, delimiter = ',')
@@ -992,8 +999,10 @@ def Compare_Distributions():
                 stdev = 1000.0*numpy.std(comb_data, ddof = 1)
                 rng = 1000.0*(numpy.max(comb_data) - numpy.min(comb_data))
                 kurt = kurtosis(comb_data)
+                labels.append(r'%(v1)s $<\Delta>$ = %(v2)0.1f +/- %(v3)0.1f ( mV )'%{"v1":circs[count], "v2":avg, "v3":stdev})
                 print("Offset: %(v2)0.3f +/- %(v3)0.3f ( mV ), range = %(v4)0.3f ( mV ), K = %(v5)0.3f"%{"v2":avg, "v3":stdev, "v4":rng, "v5":kurt})
                 print()
+                count += 1
 
         if len(the_data)>1:
             from scipy.stats import kstest
@@ -1002,12 +1011,35 @@ def Compare_Distributions():
             alpha = 0.05
             ksresult = kstest(the_data[0], the_data[1])
             if ksresult.pvalue < alpha:
-                count += 1
                 print("Reject the Null-Hypothesis p < %(v1)0.2f"%{"v1":alpha})                    
             else:
                 print("The null-hypothesis is accepted at p = %(v1)d%%"%{"v1":100*alpha})
             print("ks_stat = %(v1)0.5f, p = %(v2)0.5f"%{"v1":ksresult.statistic, "v2":ksresult.pvalue})
             print()
+
+            # Generate a plot of the distributions together
+
+            # Use Sturges' Rule to compute the no. of bins required                    
+            n_bins = int( 1.0 + 3.322*log( len( comb_data ) ) )
+
+            # when using empirical data it's best practice not to scale to mean = 0 and sigma = 1
+            #scale_data = False
+            #hist_data = [(1000.0*comb_data[j] - avg) / stdev for j in range(0, len(comb_data), 1) ] if scale_data else 1000.0*comb_data
+            hist_data = [1000.0*the_data[j] for j in range(0, len(the_data), 1)]
+
+            args = Plotting.plot_arg_multiple()
+
+            args.loud = True
+            args.bins = n_bins
+            args.cdf = False
+            args.normed = True
+            args.x_label = r'Measured Offset $\Delta = V_{set} - V_{meas}$ ( mV )'
+            args.crv_lab_list = labels
+            #args.fig_name = 'PCB_vs_Through_Hole_Offset'
+            args.fig_name = 'PCB_No_Zero_With_Zero_Offset'
+
+            Plotting.plot_multi_histogram(hist_data, args)
+
     except Exception as e:
         print(ERR_STATEMENT)
         print(e)
