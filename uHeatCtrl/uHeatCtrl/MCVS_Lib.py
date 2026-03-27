@@ -443,14 +443,14 @@ def Get_Volt_Vals(noVals, limLow = 0.0, limHigh = 5.0, crrctOffst = True, random
             if loud: print("Voltage set values:",voltVals)
 
             # Apply offset correction
-            offStDstFile = 'PCB_Offset_Data.txt'
-            if crrctOffst and glob.glob(offStDstFile): 
+            offstDstFile = 'PCB_Offset_Data.txt'
+            if crrctOffst and glob.glob(offstDstFile): 
                 # generate a set of random offset samples from the offset distribution dataset
                 # use the bootstrapping technique because it stays faithful to the original data without assuming any distribution
                 # draw random values from the dataset itself, with replacement
                 # https://numpy.org/doc/stable/reference/random/generated/numpy.random.choice.html
-                comb_data = numpy.loadtxt(offStDstFile, delimiter = ',')
-                numpy.random.seed(time.time())
+                comb_data = numpy.loadtxt(offstDstFile, delimiter = ',')
+                #numpy.random.seed(time.time())
                 offSets = numpy.random.choice(comb_data, size = noVals, replace = True)
                 voltVals = voltVals + offSets
                 if loud: print(offSets)
@@ -830,9 +830,11 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
         c10 = c2 and c3
 
         if c10:
-            zstat = 'No'
+            #zstat = 'No'
             #zstat = 'With'
-            filename = '%(v1)s_Offset_Data_NoCh_%(v2)d_NoMeas_%(v3)d_%(v4)s_Zeroing.txt'%{"v1":brdName, "v2":noPins, "v3":noMeas, "v4":zstat}
+            # filename = '%(v1)s_Offset_Data_NoCh_%(v2)d_NoMeas_%(v3)d_%(v4)s_Zeroing.txt'%{"v1":brdName, "v2":noPins, "v3":noMeas, "v4":zstat}
+            crrctOffst = True
+            filename = '%(v1)s_Offset_Data_NoCh_%(v2)d_NoMeas_%(v3)d_OffstCrrctd_%(v4)s.txt'%{"v1":brdName, "v2":noPins, "v3":noMeas, "v4":'Yes' if crrctOffst else 'No'}
 
             if glob.glob(filename):
                 dF = pandas.read_csv(filename)
@@ -895,7 +897,7 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
                 
                     del hv_data
 
-                PLOT_HIST = False
+                PLOT_HIST = True
                 if PLOT_HIST:
                     # Use Sturges' Rule to compute the no. of bins required
                     from math import log
@@ -904,12 +906,12 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
                     args = Plotting.plot_arg_multiple()
 
                     args.loud = True
-                    args.crv_lab_list = titles[1:len(titles)]
+                    #args.crv_lab_list = titles[1:len(titles)]
                     args.bins = n_bins
-                    args.cdf = True
+                    args.cdf = False
                     args.normed = False
                     args.x_label = r'Measured Offset $\Delta = V_{set} - V_{meas}$ ( mV )'
-                    #args.curve_label = r'$<\Delta>$ = %(v2)0.1f +/- %(v3)0.1f ( mV )'%{"v2":avg, "v3":stdev}
+                    args.crv_lab_list = [r'$<\Delta>$ = %(v2)0.1f +/- %(v3)0.1f ( mV )'%{"v2":avg_arr[i], "v3":stdev_arr[i]} for i in range(0, len(avg_arr))]
                     
                     # when comparing one distribution against another it is best practice to use unscaled data
                     hist_data = [1000.0*dF[ titles[i] ] for i in range(1, len(titles), 1) ]
@@ -923,7 +925,7 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
 
                     del hist_data
 
-                COMBINE_STREAMS = True
+                COMBINE_STREAMS = False
                 if COMBINE_STREAMS:
                     # Combine all the offset measurements into a single data set
                     # Use this to generate a single empirical distribution

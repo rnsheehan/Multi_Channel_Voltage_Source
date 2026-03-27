@@ -30,7 +30,7 @@ if __name__ == '__main__':
         pinOuts = ["V1", "V2", "V3", "V4"]
         MCVS_Lib.Multi_Channel_Calibration(board_name, pinOuts)
 
-    OPERATE_BOARD = True
+    OPERATE_BOARD = False
     if OPERATE_BOARD:
         #board_name = 'Through_Hole'
         board_name = 'Four_Channel_PCB'
@@ -54,18 +54,17 @@ if __name__ == '__main__':
         #board_name = 'Through_Hole'
         board_name = 'Four_Channel_PCB'
         pinOuts = ["V1", "V2", "V3", "V4"]
-        Nmeas = 1001 # total no. measurements
-        zero_outputs = False
+        Nmeas = 101 # total no. measurements
         crrctOffst = True
         Loud = True
-        MCVS_Lib.Offset_Calibration(board_name, pinOuts, Nmeas, zero_outputs, Loud)
+        MCVS_Lib.Offset_Calibration(board_name, pinOuts, Nmeas, crrctOffst, Loud)
 
-    OFFSET_CALIB_ANAL = False
+    OFFSET_CALIB_ANAL = True
     if OFFSET_CALIB_ANAL:
         #board_name = 'Through_Hole'
         board_name = 'Four_Channel_PCB'
         pinOuts = ["V1", "V2", "V3", "V4"]
-        Nmeas = 1001 # total no. measurements
+        Nmeas = 101 # total no. measurements
         zero_outputs = True
         Loud = True
         MCVS_Lib.Offset_Calibration_Analysis(board_name, pinOuts, Nmeas, Loud)
