@@ -897,7 +897,7 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
                 
                     del hv_data
 
-                PLOT_HIST = True
+                PLOT_HIST = False
                 if PLOT_HIST:
                     # Use Sturges' Rule to compute the no. of bins required
                     from math import log
@@ -925,7 +925,7 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
 
                     del hist_data
 
-                COMBINE_STREAMS = False
+                COMBINE_STREAMS = True
                 if COMBINE_STREAMS:
                     # Combine all the offset measurements into a single data set
                     # Use this to generate a single empirical distribution
@@ -937,7 +937,8 @@ def Offset_Calibration_Analysis(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], 
                         comb_data = numpy.append(comb_data, dF[titles[i]])
 
                     # Write the combined offset distribution data to a file
-                    filename = '%(v1)s_Offset_Data_%(v2)s_Zeroing.txt'%{"v1":brdName, "v2":zstat}
+                    #filename = '%(v1)s_Offset_Data_%(v2)s_Zeroing.txt'%{"v1":brdName, "v2":zstat}
+                    filename = '%(v1)s_Offset_Data_With_Correction.txt'%{"v1":brdName}
                     numpy.savetxt(filename, comb_data, fmt = "%0.9f", delimiter = ',')
 
                     from scipy.stats import kurtosis
