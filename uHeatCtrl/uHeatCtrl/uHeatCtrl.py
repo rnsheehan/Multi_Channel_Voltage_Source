@@ -30,9 +30,10 @@ if __name__ == '__main__':
         pinOuts = ["V1", "V2", "V3", "V4"]
         MCVS_Lib.Multi_Channel_Calibration(board_name, pinOuts)
 
-    OPERATE_BOARD = False
+    OPERATE_BOARD = True
     if OPERATE_BOARD:
-        board_name = 'Through_Hole'
+        #board_name = 'Through_Hole'
+        board_name = 'Four_Channel_PCB'
         pinOuts = ["V1", "V2", "V3", "V4"]
         IBM4Read = False
         NIDAQRead = True
@@ -55,6 +56,7 @@ if __name__ == '__main__':
         pinOuts = ["V1", "V2", "V3", "V4"]
         Nmeas = 1001 # total no. measurements
         zero_outputs = False
+        crrctOffst = True
         Loud = True
         MCVS_Lib.Offset_Calibration(board_name, pinOuts, Nmeas, zero_outputs, Loud)
 

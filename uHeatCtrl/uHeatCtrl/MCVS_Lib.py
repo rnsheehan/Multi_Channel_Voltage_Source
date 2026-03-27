@@ -367,8 +367,9 @@ def Board_Operation(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], includeIBM4r
                     input("\nPress Enter to proceed with voltage selection. \nPress Ctrl+C to stop.\n")
                     # Create an array for holding the voltage values
                     randomVals = True
+                    crrctOffst = True
                     Loud = True
-                    voltVals = Get_Volt_Vals(noPins, lower, upper, randomVals, Loud)
+                    voltVals = Get_Volt_Vals(noPins, lower, upper, crrctOffst, randomVals, Loud)
 
                     # Write the voltage values to the PCB
                     Assign_Volt_Vals(calData, pwmPins, voltVals, the_dev)
@@ -399,11 +400,18 @@ def Board_Operation(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], includeIBM4r
         print(ERR_STATEMENT)
         print(e)
 
-def Get_Volt_Vals(noVals, limLow = 0.0, limHigh = 5.0, randomVals = False, loud = False):
+def Get_Volt_Vals(noVals, limLow = 0.0, limHigh = 5.0, crrctOffst = True, randomVals = False, loud = False):
     """
     Method for populating a numpy array using keyboard input
     Values entered will be forced between limits limLow <= X <= limHigh
     Alternatively, a set of random voltages between limits limLow <= X <= limHigh can be assigned
+
+    Inputs
+    noVals (type int) tell computer how many voltage values are required
+    limLow (type float) lower bound on voltage output default at 0V
+    limHigh (type float) upper bound on voltage output default at 5V
+    crrctOffst (type boolean) tell computer to apply offset correction default True
+    randomVals (type boolean) tell computer to assign random values to voltage outputs default False
 
     R. Sheehan 13 - 3 - 2026
     """
@@ -433,6 +441,19 @@ def Get_Volt_Vals(noVals, limLow = 0.0, limHigh = 5.0, randomVals = False, loud 
                 for i in range(0, noVals, 1):
                     voltVals[i] = limLow + (limHigh - limLow) * random() # generate random number in range [limLow, limHigh] using formula a + (b - a) * random()
             if loud: print("Voltage set values:",voltVals)
+
+            # Apply offset correction
+            offStDstFile = 'PCB_Offset_Data.txt'
+            if crrctOffst and glob.glob(offStDstFile): 
+                # generate a set of random offset samples from the offset distribution dataset
+                # use the bootstrapping technique because it stays faithful to the original data without assuming any distribution
+                # draw random values from the dataset itself, with replacement
+                # https://numpy.org/doc/stable/reference/random/generated/numpy.random.choice.html
+                comb_data = numpy.loadtxt(offStDstFile, delimiter = ',')
+                numpy.random.seed(time.time())
+                offSets = numpy.random.choice(comb_data, size = noVals, replace = True)
+                voltVals = voltVals + offSets
+                if loud: print(offSets)
 
             return voltVals
         else:
@@ -668,7 +689,7 @@ def Long_Measurement(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], totalTime =
         print(ERR_STATEMENT)
         print(e)
 
-def Offset_Calibration(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], noMeas = 11, zeroBtwnSets = False, loud = False):
+def Offset_Calibration(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], noMeas = 11, crrctOffst = True, loud = False):
     """
     Measure the difference between set-voltage and output voltage from the PCB
     Gather data on the distribution of the offset value
@@ -678,6 +699,9 @@ def Offset_Calibration(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], noMeas = 
     brdName (type: string) label for whichever board is being tested
     voltChnnls (type: str list) list containing the names of the voltage channels being used as PCB outputs
     noMeas (type: int) number of measurements to be taken
+    crrctOffst (type boolean) tell computer to apply offset correction default True
+    
+    DEPRECATED BECAUSE IT MADE NO DIFFERENCE TO OFFSET DISTRIBUTION
     zeroBtwnSets (type: boolean) tells the code whether or not to zero outputs between measurements, want to test to see if the zeroing between outputs has an effect on the offset, during normal operations would not expect to zero between outputs
 
     R. Sheehan 23 - 3 - 2026
@@ -717,10 +741,14 @@ def Offset_Calibration(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], noMeas = 
             
             # Create the file for writing
             # open the file for writing, truncating it first
-            if zeroBtwnSets:
-                filename = '%(v1)s_Offset_Data_NoCh_%(v2)d_NoMeas_%(v3)d_With_Zeroing.txt'%{"v1":brdName, "v2":noPins, "v3":noMeas}
-            else:
-                filename = '%(v1)s_Offset_Data_NoCh_%(v2)d_NoMeas_%(v3)d_No_Zeroing.txt'%{"v1":brdName, "v2":noPins, "v3":noMeas}
+
+            # OPTION TO ZERO BETWEEN OUTPUTS IS DEPRECATED
+            # if zeroBtwnSets:
+            #     filename = '%(v1)s_Offset_Data_NoCh_%(v2)d_NoMeas_%(v3)d_With_Zeroing.txt'%{"v1":brdName, "v2":noPins, "v3":noMeas}
+            # else:
+            #     filename = '%(v1)s_Offset_Data_NoCh_%(v2)d_NoMeas_%(v3)d_No_Zeroing.txt'%{"v1":brdName, "v2":noPins, "v3":noMeas}
+            
+            filename = '%(v1)s_Offset_Data_NoCh_%(v2)d_NoMeas_%(v3)d_OffstCrrctd_%(v4)s.txt'%{"v1":brdName, "v2":noPins, "v3":noMeas, "v4":'Yes' if crrctOffst else 'No'}
             the_file = open(filename,'w') # open the file for writing, truncating it first
             title = 'Meas, '
             for k in range(0, len(voltChnnls), 1):
@@ -736,7 +764,7 @@ def Offset_Calibration(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], noMeas = 
             for i in range(0, noMeas, 1):
                 # Create an array for holding the voltage values
                 randomVals = True
-                voltVals = Get_Volt_Vals(noPins, lower, upper, randomVals)
+                voltVals = Get_Volt_Vals(noPins, lower, upper, crrctOffst, randomVals)
 
                 # Write the voltage values to the PCB
                 Assign_Volt_Vals(calData, pwmPins, voltVals, the_dev)
@@ -760,7 +788,8 @@ def Offset_Calibration(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], noMeas = 
                     if i%50 == 0:
                         print("Meas:",i,", Output Offset:",deltaVals)
 
-                if zeroBtwnSets: the_dev.ZeroIBM4()
+                # OPTION TO ZERO BETWEEN OUTPUTS IS DEPRECATED
+                #if zeroBtwnSets: the_dev.ZeroIBM4()
 
             end = time.time()
             deltaT = end - start
