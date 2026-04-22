@@ -366,8 +366,8 @@ def Board_Operation(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], includeIBM4r
                 while True:
                     input("\nPress Enter to proceed with voltage selection. \nPress Ctrl+C to stop.\n")
                     # Create an array for holding the voltage values
-                    randomVals = True
-                    crrctOffst = True
+                    randomVals = False
+                    crrctOffst = False
                     Loud = True
                     voltVals = Get_Volt_Vals(noPins, lower, upper, crrctOffst, randomVals, Loud)
 
@@ -375,7 +375,8 @@ def Board_Operation(brdName, voltChnnls = ['V1', 'V2', 'V3', 'V4'], includeIBM4r
                     Assign_Volt_Vals(calData, pwmPins, voltVals, the_dev)
 
                     # Read the assigned values using the IBM4 itself, only possible for 'Four_Channel_PCB'
-                    if includeIBM4read: Perform_IBM4_Read(pwmPins, the_dev)
+                    if includeIBM4read: 
+                        Perform_IBM4_Read(pwmPins, the_dev)
 
                     # Read the output values using the NI-DAQ
                     if includeNIDAQread: 

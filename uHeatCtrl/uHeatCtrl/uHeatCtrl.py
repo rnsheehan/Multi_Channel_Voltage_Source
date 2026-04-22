@@ -33,10 +33,14 @@ if __name__ == '__main__':
     OPERATE_BOARD = True
     if OPERATE_BOARD:
         #board_name = 'Through_Hole'
+        
         board_name = 'Four_Channel_PCB'
         pinOuts = ["V1", "V2", "V3", "V4"]
+
+        #board_name = 'Eight_Channel_PCB'
+        #pinOuts = ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8"]
         IBM4Read = False
-        NIDAQRead = True
+        NIDAQRead = False
         Loud = False
         MCVS_Lib.Board_Operation(board_name, pinOuts, IBM4Read, NIDAQRead, Loud)
 
